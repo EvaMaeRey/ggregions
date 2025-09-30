@@ -1,0 +1,290 @@
+---
+output: 
+  github_document:
+    toc: TRUE
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+
+
+## Intro Thoughts
+
+
+## Status Quo
+
+```{r}
+library(tidyverse)
+library(ozmaps)
+
+# some data that we want to viz
+au_states <- tribble(~state, ~pop,
+        "Victoria", 1,
+        "Queensland", 2,
+        "New South Wales", 3,
+        "Western Australia", 4,
+        "Northern Territory", 5,
+        "Tasmania", 6,
+        "South Australia", 7,
+        "Australian Capital Territory", 8,
+        "Other Territories", 9
+        )
+
+sf_oz <- ozmap("states")
+
+sf_oz |> names()
+
+sf_oz |>
+  full_join(au_states, by = join_by(NAME == state )) |> 
+  ggplot() + 
+  aes(geometry = geometry, fill = pop) + 
+  geom_sf()
+```
+
+
+
+
+
+
+# But awkward, so... Step 1. Compute
+
+```{r}
+australia_state_ref <- sf_oz |>
+  select(state_name = NAME)
+
+
+compute_panel_regions <- function(data, scales, ref_data, keep = NULL, drop = NULL, stamp = F){
+
+ref_data$id <- ref_data[1][[1]]
+
+if(!is.null(keep)){ref_data <- ref_data |> filter(id %in% keep)}
+if(!is.null(drop)){ref_data <- ref_data |> filter(!(id %in% drop))}
+
+ref_data <- ref_data |> 
+    ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
+    ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
+
+if(!stamp){ ref_data |> inner_join(data) } else { ref_data }
+
+}
+```
+
+
+# Test Compute
+
+```{r}
+au_states |> 
+  rename(state_name = state) |>
+  compute_panel_regions(ref_data = australia_state_ref)
+
+ggplot(au_states) +
+  aes(state_name = state) +
+  geom_sf(stat = ggproto(NULL, Stat, 
+                         compute_panel = compute_panel_regions), 
+          ref_data = australia_state_ref) + 
+  aes(fill = pop)
+```
+
+# Step 2. Define Stat
+
+```{r}
+StatRegion <- ggproto("StatRegion",
+                      Stat,
+                      compute_panel = compute_panel_regions,
+                      default_aes = aes(label = after_stat(id)))
+```
+
+# Test Stat
+
+```{r}
+ggplot(au_states) +
+  aes(state_name = state) +
+  geom_sf(stat = StatRegion) + 
+  geom_text(stat = StatRegion) +
+  aes(fill = pop)
+```
+
+
+# Step 3. Define user facing function w/ `make_constructor`... But: coord_sf must be added separately
+
+```{r}
+geom_state <- make_constructor(GeomSf, stat = StatRegion, ref_data = australia_state_ref)
+geom_state_text <- make_constructor(GeomText, stat = StatRegion, ref_data = australia_state_ref)
+
+crs_au_states <- sf::st_crs(sf_oz)
+
+ggplot(au_states) +
+  aes(state_name = state) + 
+  geom_state() + # errors without coord_sf, and needs the right one
+  geom_state_text(check_overlap = T, size = 2) + 
+  aes(fill = pop) +
+  coord_sf(crs = crs_au_states)
+
+```
+
+
+# Step 3.0.1 make geom_region0 (no coords) and friends w/ `make_constructor`... and geom_region (w/ coords)... and friends.
+
+
+```{r, eval = T, error = T}
+geom_region0 <- make_constructor(GeomSf, stat = StatRegion) # no crs
+stamp_region0 <- make_constructor(GeomSf, stat = StatRegion, stamp = T, inherit.aes = F) # no crs
+geom_region_text0 <- make_constructor(GeomText, stat = StatRegion) # no crs
+stamp_region_text0 <- make_constructor(GeomText, stat = StatRegion, stamp = T, inherit.aes = F) # no crs
+
+# all the arguments *should* be passed, but this for the sake of demo
+geom_region <- function(..., ref_data){
+  c(geom_region0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+# all the arguments *should* be passed, but this for the sake of demo
+stamp_region <- function(..., ref_data){
+  c(stamp_region0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+geom_region_text <- function(..., ref_data){
+  c(geom_region_text0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+stamp_region_text <- function(..., ref_data){
+  c(stamp_region_text0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+```
+
+# Step 4. make region-specific user-facing functions!
+
+```{r}
+# all arguments above that should be passed, could be passed, or, 
+geom_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
+stamp_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
+geom_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
+stamp_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
+```
+
+
+
+
+# test!
+
+```{r}
+au_states |>
+ggplot() +
+  aes(state_name = state,
+      fill = pop) + 
+  geom_au_states() +
+  geom_au_states(stamp = T,
+              keep = "Tasmania", 
+              fill = "orange") +
+  geom_au_states_text()  
+
+au_states |>
+  ggplot() +
+  aes(state_name = state) + 
+  geom_au_states(aes(fill = pop)) + 
+  stamp_au_states(color = "red", keep = "Western Australia")
+
+```
+
+
+## nc test
+
+```{r}
+nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
+  select(county_name = NAME, fips = FIPS)
+
+geom_nc_county <- function(...){geom_region(..., ref_data = nc_ref)}
+
+nc_data <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
+  sf::st_drop_geometry()
+
+nc_data |>
+  ggplot() +
+  aes(county_name = NAME,
+      fill = AREA) + 
+  geom_nc_county()
+
+```
+
+
+
+
+
+# epiloge, something nicer for for geom_region -> geom_province, geom_state, etc?  `specify_geom_region()`
+
+```{r, eval = T}
+geom_region0
+
+# all the arguments should be passed
+geom_region <- function(mapping = NULL, data = NULL, stat = StatRegion, position = "identity", 
+                        ..., legend = NULL, lineend = "butt", linejoin = "round", 
+    linemitre = 10, arrow = NULL, arrow.fill = NULL, na.rm = FALSE, 
+    show.legend = NA, inherit.aes = TRUE, ref_data){
+  
+  c(geom_region0(mapping = mapping, data = data, stat = stat, 
+        position = position, show.legend = show.legend, inherit.aes = inherit.aes, ref_data = ref_data,
+        params = rlang::list2(na.rm = na.rm, legend = legend, lineend = lineend, 
+            linejoin = linejoin, linemitre = linemitre, arrow = arrow, 
+            arrow.fill = arrow.fill, ...)), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+  
+}
+
+
+write_geom_region_locale <- function(ref_data = australia_state_ref){
+
+geom_region_local <- geom_region
+
+formals(geom_region_local)$ref_data <- substitute(ref_data)
+
+return(geom_region_local)
+
+}
+
+
+geom_au_state <- write_geom_region_locale(ref_data = australia_state_ref)
+
+geom_au_state
+
+au_states |> 
+  ggplot() + 
+  aes(state_name = state, fill = pop) + 
+  geom_au_state()
+
+geom_au_state
+```
+
+# us state example
+
+```{r}
+us_states_ref <- usmapdata::us_map() |>
+  rename(geometry = geom,
+         state_name = full,
+         state_abbr = abbr) |>
+  select(state_name, everything())
+  
+
+geom_us_state <- write_geom_region_locale(ref_data = us_states_ref)
+
+us_rent_income |> 
+  filter(variable == "income") |>
+  ggplot() + 
+  aes(state_name = NAME, fill = estimate) + 
+  geom_us_state() + 
+  scale_fill_viridis_c(option = "magma")
+
+
+```
+
+## Closing remarks, Other Relevant Work, Caveats
