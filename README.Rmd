@@ -1,7 +1,7 @@
 ---
 output: 
   github_document:
-    toc: TRUE
+    toc: FALSE
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -9,19 +9,129 @@ output:
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>", 
+  message = F,
+  warning = F
 )
 ```
 
+# Rationale
 
+> I am told there are people who do not care for maps, and I find it hard to believe. - Robert Louis Stevenson
 
+> My teacher, Mr. Jayson, says a map is a picture of someplace from above.  It's like flying over that spot in an airplane. - 'Lisa' in Loreen Leedy's in 'Mappying Penny's World'
 
-## Intro Thoughts
+> I hate when I work with spatial data that so much of my mindshare goes to thinking about 'how do I wrangle this this map and what on earth is going on' versus the actual meaning behind what I'm trying to map. - Emily Riederer
 
+Maps are some of the most intuitive data visualizations and some of the first visualizations people will come across in their lives.  There is great support for mapping in R and data viz library {ggplot2}.  
 
-## Status Quo
+However, producing a simple map like a choropleth can feel much more effortful than producing other plots, like a scatterplot for example.  A scatter plot is produced by 
+
+```r 
+ggplot(scatter_data) + # data
+   aes(x = x, y = y) + # position and other visual channel mapping
+   geom_point()        # layer 
+```
+
+This proposal posits that by investing in methods to easily create new geo-specific ggplot2 layer extensions (geom_*s), producing maps with ggplot2 can become as intuitive as creating other plot as well as reading the maps themselves. 
+
+> Your API feels like it actually puts the "question" at the center.. - Emily Riederer
+
+Proposed regions mapping pseudo code:
+
+```r
+ggplot2(mapping_data) +             # data
+   aes(region_id = var1_region_id,  # position mapping 
+       fill = var2) +               # and other visual channel mapping
+   geom_region()                    # layer
+```
+
+# Proposing {ggregions}
+
+A {ggregions} package (in proof of concept phase) will allow geographic data package writers to easily create easy-to-use ggplot2 layer extensions that adhere to the ggplot2 'grammar'.
+
+First the authors will prepare a reference dataset that contains a geometry column and columns of allowed identifiers for the regions of interest.  For example, the identifiers from in `us_states_ref` from `usmapdata::us_map()`, are `state_name`, `fips` and `state_abbr`. 
+
+```{r, eval = T}
+library(dplyr)
+
+# Step 1. prep some of their geo reference data
+us_states_ref <- usmapdata::us_map() |>
+  rename(geometry = geom,  # one column with geometry is required
+         state_name = full, # state_name will positional aes like x or y 
+         state_abbr = abbr) |> # state_abbr will also be optional positional aes like x or y
+  select(state_name, everything())
+
+head(us_states_ref)
+```
+
+Packages that might take avantage of `write_geom_region_locale()` and similar offerings include
+[afrimapr](https://afrimapr.github.io/afrimapr.website/), [geobr](https://ipeagit.github.io/geobr/), [cancensus](https://mountainmath.github.io/cancensus/index.html), [chilemapas](https://pacha.dev/chilemapas/), [RCzechia](https://github.com/jlacko/RCzechia), [geofi](https://ropengov.github.io/geofi/)
+, [geokz](https://github.com/arodionoff/geokz), [mapsPERU](https://github.com/musajajorge/mapsPERU) and [geoidep](https://geografo.pe/geoidep/index.html), [mapSpain](https://github.com/rOpenSpain/mapSpain/), [geographr](https://github.com/britishredcrosssociety/geographr), [geouy](https://github.com/RichDeto/geouy), [tigris](https://github.com/walkerke/tigris),
+and [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries).
+ 
+
+Then, authors will be able use `write_geom_region_locale()` to create a regions-specific ggplot2 layer, for example `geom_us_state()` below, which can be made available in their geo packages.
 
 ```{r}
+# Step 2. use `write_geom_region_locale`
+library(ggregions)
+geom_us_state <- write_geom_region_locale(ref_data = us_states_ref)
+```
+
+By including the newly specified `geom_` function in their geo data package (perhaps instead or in addition to a convenience wrapper that are typical of geo packages) the package *users* will be able to use the` data + aes + geom` formulation for defining their plots.  Instead of positional aesthetics like x, y or geometry, a region identifier like `state_name` or `fips` can be used.  Internally, the regions `geom_*` will translate between place name or other identifier to the necessary polygons.
+
+### Some tabular data with geographic region identifiers, but no boundaries
+
+```{r, eval = T}
+us_income <- tidyr::us_rent_income |> 
+  filter(variable == "income") |>
+  rename(income = estimate)
+
+head(us_income)
+```
+
+```{r, echo = F}
+library(ggplot2)
+(theme_gray() + 
+  theme(palette.colour.continuous = "magma")) |> 
+  set_theme()
+```
+
+### New syntax: data + position and color mapping + layer
+
+```{r}
+library(ggplot2)
+library(usmapdata)
+
+ggplot(data = us_income) + 
+  aes(state_name = NAME, 
+      fill = income) + 
+  geom_us_state()
+```
+
+Since the geo packages listed above have many users, the impacts of `{ggregions}` could be significant.
+
+
+Dependencies:
+
+- ggplot2
+- sf
+- dplyr (this could be eliminated in the version for the R consortium)
+
+
+Potential direct users:
+
+Many packages that provide geographic data and also provide visualization functionality might find this package useful to provide functionality in the grammar of graphics frame work.
+
+Downstream user perspective (i.e. users of the package that use geom_*() produced with this method): 
+
+
+
+
+## Status Quo: inconsistent apis, or leave the data manipulation to the user
+
+```{r, message=F, warning=F, fig.show='hide'}
 library(tidyverse)
 library(ozmaps)
 
@@ -59,20 +169,22 @@ sf_oz |>
 ```{r}
 australia_state_ref <- sf_oz |>
   select(state_name = NAME)
+```
 
 
+```{r}
 compute_panel_regions <- function(data, scales, ref_data, keep = NULL, drop = NULL, stamp = F){
 
 ref_data$id <- ref_data[1][[1]]
 
-if(!is.null(keep)){ref_data <- ref_data |> filter(id %in% keep)}
-if(!is.null(drop)){ref_data <- ref_data |> filter(!(id %in% drop))}
+if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
+if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
 
 ref_data <- ref_data |> 
     ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
     ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
 
-if(!stamp){ ref_data |> inner_join(data) } else { ref_data }
+if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
 
 }
 ```
@@ -95,11 +207,27 @@ ggplot(au_states) +
 
 # Step 2. Define Stat
 
-```{r}
-StatRegion <- ggproto("StatRegion",
-                      Stat,
+```{r StatRegion}
+compute_panel_regions <- function(data, scales, ref_data, keep = NULL, drop = NULL, stamp = F){
+
+ref_data$id <- ref_data[1][[1]]
+
+if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
+if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
+
+ref_data <- ref_data |> 
+    ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
+    ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
+
+if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
+
+}
+
+
+StatRegion <- ggplot2::ggproto("StatRegion",
+                      ggplot2::Stat,
                       compute_panel = compute_panel_regions,
-                      default_aes = aes(label = after_stat(id)))
+                      default_aes = ggplot2::aes(label = ggplot2::after_stat(id)))
 ```
 
 # Test Stat
@@ -107,8 +235,8 @@ StatRegion <- ggproto("StatRegion",
 ```{r}
 ggplot(au_states) +
   aes(state_name = state) +
-  geom_sf(stat = StatRegion) + 
-  geom_text(stat = StatRegion) +
+  geom_sf(stat = StatRegion, ref_data = australia_state_ref) + 
+  geom_text(stat = StatRegion, ref_data = australia_state_ref) +
   aes(fill = pop)
 ```
 
@@ -134,12 +262,15 @@ ggplot(au_states) +
 # Step 3.0.1 make geom_region0 (no coords) and friends w/ `make_constructor`... and geom_region (w/ coords)... and friends.
 
 
-```{r, eval = T, error = T}
-geom_region0 <- make_constructor(GeomSf, stat = StatRegion) # no crs
-stamp_region0 <- make_constructor(GeomSf, stat = StatRegion, stamp = T, inherit.aes = F) # no crs
-geom_region_text0 <- make_constructor(GeomText, stat = StatRegion) # no crs
-stamp_region_text0 <- make_constructor(GeomText, stat = StatRegion, stamp = T, inherit.aes = F) # no crs
+```{r geom_region0, eval = T, error = T}
+geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) # no crs
+stamp_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion, stamp = T, inherit.aes = F) # no crs
+geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion) # no crs
+stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F) # no crs
+```
 
+
+```{r}
 # all the arguments *should* be passed, but this for the sake of demo
 geom_region <- function(..., ref_data){
   c(geom_region0(..., ref_data = ref_data), 
@@ -214,18 +345,15 @@ nc_data |>
   aes(county_name = NAME,
       fill = AREA) + 
   geom_nc_county()
-
 ```
 
 
 
 
 
-# epiloge, something nicer for for geom_region -> geom_province, geom_state, etc?  `specify_geom_region()`
+# `write_geom_region_locale()`
 
-```{r, eval = T}
-geom_region0
-
+```{r write_geom_region_locale, eval = T}
 # all the arguments should be passed
 geom_region <- function(mapping = NULL, data = NULL, stat = StatRegion, position = "identity", 
                         ..., legend = NULL, lineend = "butt", linejoin = "round", 
@@ -241,18 +369,22 @@ geom_region <- function(mapping = NULL, data = NULL, stat = StatRegion, position
   
 }
 
-
+#' @export
 write_geom_region_locale <- function(ref_data = australia_state_ref){
 
-geom_region_local <- geom_region
+  geom_region_local <- geom_region
 
 formals(geom_region_local)$ref_data <- substitute(ref_data)
 
 return(geom_region_local)
 
 }
+```
 
 
+# Australia example... 
+
+```{r}
 geom_au_state <- write_geom_region_locale(ref_data = australia_state_ref)
 
 geom_au_state
@@ -274,7 +406,6 @@ us_states_ref <- usmapdata::us_map() |>
          state_abbr = abbr) |>
   select(state_name, everything())
   
-
 geom_us_state <- write_geom_region_locale(ref_data = us_states_ref)
 
 us_rent_income |> 
@@ -283,8 +414,228 @@ us_rent_income |>
   aes(state_name = NAME, fill = estimate) + 
   geom_us_state() + 
   scale_fill_viridis_c(option = "magma")
-
-
 ```
 
-## Closing remarks, Other Relevant Work, Caveats
+
+## Minimal packaging...
+
+```{r, eval = F}
+devtools::create(".")
+```
+
+
+```{r}
+knitrExtra::chunk_to_dir("StatRegion")
+knitrExtra::chunk_to_dir("geom_region0")
+knitrExtra::chunk_to_dir("write_geom_region_locale")
+
+usethis::use_package("ggplot2")
+usethis::use_package("sf")
+usethis::use_package("dplyr")
+```
+
+```{r, eval = F}
+devtools::document()
+devtools::check(".")
+devtools::install(pkg = ".", upgrade = "never")
+```
+
+
+
+# Executive Summary
+
+<!--
+This section provides a condensed view of the entire proposal, one page long.
+It should be a comprehensive high-level overview that captures the essence of the proposal, including its goals, methods, expected outcomes, deliverables, and budget.
+-->
+
+# Signatories
+<!--
+This section provides the ISC with a view of the support received from
+the community for a proposal. Acceptance isn't predicated on
+popularity but community acceptance is important. Willingness to
+accept outside input is also a good marker for project delivery.
+
+An optional section would be for R-Core signatories where changes to R
+are proposed.
+-->
+
+## Project team
+<!--
+Who are the people responsible for actually delivering the project if
+the proposal gets accepted and are already signed up and rearing to
+go? Briefly describe all participants and the skills they will bring
+to the project.
+-->
+
+## Contributors
+<!--
+Who are the people who have actively helped with this proposal but
+won't necessarily be on the core project team later?
+-->
+
+## Consulted
+<!--
+Who has been given the opportunity to provide feedback on the
+proposal? This should include any R Consortium & ISC members who the
+proposal has been discussed with.
+-->
+
+
+---
+bibliography: references.bib
+---
+
+# The Problem
+
+```{=html}
+<!--
+Outlining the issue / weak point / problem to be solved by this
+proposal. This should be a compelling section that sets the reader up
+for the next section - the proposed solution!
+
+It is important to cover:
+
+ - [ ] What the problem is
+ - [ ] Who it affects
+ - [ ] Why is it a problem
+ - [ ] What will solving the problem enable (why should it be solved)
+ - [ ] Brief summary of existing work and previous attempts (e.g., relevant R packages)
+ - [ ] If proposing changes to R itself: letter of support from R Core member
+-->
+```
+
+
+# The proposal
+<!--
+How are you going to solve the problem? Include the concrete actions you
+will take and an estimated timeline. What are likely failure modes and
+how will you recover from them?
+
+This is where the proposal should be outlined.
+-->
+
+## Overview
+<!--
+At a high-level address what your proposal is and how it will address
+the problem identified. Highlight any benefits to the R Community that
+follow from solving the problem. This should be your most compelling
+section.
+
+Include concrete actions you will take and estimated timeline.
+-->
+
+## Detail
+<!--
+Go into more detail about the specifics of the project and how it delivers
+against the problem.
+
+Depending on project type the detail section should include:
+-->
+
+### Minimum Viable Product
+
+<!--
+What is the smallest thing you can build that delivers value to your users?
+-->
+
+### Architecture
+
+<!--
+What does the high-level architecture look like?
+-->
+
+### Assumptions
+
+<!--
+What assumptions are you making that, if proven false, would invalidate the project?
+-->
+
+### External dependencies
+
+<!--
+What external dependencies does the project have (e.g. libraries, services, other projects, etc.)?
+-->
+
+
+# Project plan
+
+## Start-up phase
+<!--
+Covering the planning phase, this section should provide a relatively
+detailed plan of how work will start on the project. This section is
+important because projects need to get up and running quickly.
+
+
+ - [ ] Setting up collaboration platform inc. code for contributors etc.
+ - [ ] Licence decisions
+ - [ ] Reporting framework
+-->
+
+
+## Technical delivery
+<!--
+Covering the actual delivery of the project this section should
+provide at least a high-level description of the implementation.
+
+Including target dates is really important as you need to be committed
+and the ISC need to have a means of tracking delivery
+-->
+
+## Other aspects
+
+<!--
+How will you ensure that your work is available to the widest number
+of people? Please specify the open-source or creative commons license(s)
+you will use, how you will host your code so that others can contribute,
+and how you will publicize your work. We encourage you to plan content
+to be shared quarterly on the R Consortium blog.
+
+ - [ ] Announcement post
+ - [ ] Delivery blog post
+ - [ ] Social media
+ - [ ] UseR!
+ - [ ] ISC meetings
+-->
+
+## Budget & funding plan
+
+<!--
+Outline the milestones for development and how much funding will be
+required for each stage (as payments will be tied to project milestone
+completion). Each milestone should specify the work to be done and the
+expected outcomes, providing enough detail for the ISC to understand
+the scope of the project work and assess the likelihood of success.
+
+We expect that most of the budget will be allocated
+for labor costs. We do not cover indirect costs. The ISC grants cannot
+cover such things as travel, lodging, food, journal publication fees,
+or personal hardware. Cloud services may be covered if they are specific
+to the project and the project period. The ISC reserves the right to vet
+how funds are used for each project separately. If in doubt, please reach
+out to us.
+-->
+
+
+# Success
+<!--
+Projects should have a definition of done that is measurable, and a
+thorough understanding going in of what the risks are to delivery
+-->
+
+## Definition of done
+<!--
+What does success look like?
+-->
+
+## Measuring success
+<!--
+How will we know when success is achieved, what markers can we use
+along the way
+-->
+
+## Future work
+<!--
+How could this be extended / developed in the future by yourself
+and/or the community in general?
+-->
