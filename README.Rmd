@@ -23,9 +23,9 @@ knitr::opts_chunk$set(
 
 > I hate when I work with spatial data that so much of my mindshare goes to thinking about 'how do I wrangle this this map and what on earth is going on' versus the actual meaning behind what I'm trying to map. - Emily Riederer
 
-Maps are some of the most intuitive data visualizations and some of the first visualizations people will come across in their lives.  There is great support for mapping in R and data viz library {ggplot2}.  
+Maps are some of the most compelling and intuitive data visualizations, and they are some of the first visualizations people will come across in their lives.  There is great support for mapping in R and data viz library {ggplot2}.  
 
-However, producing a simple map like a choropleth can feel much more effortful than producing other plots, like a scatterplot for example.  A scatter plot is produced by 
+However, producing a simple map, like a choropleth, can feel much more effortful than producing other plots, like a scatterplot for example in ggplot2.  A scatter plot is produced by:
 
 ```r 
 ggplot(scatter_data) + # data
@@ -65,11 +65,6 @@ us_states_ref <- usmapdata::us_map() |>
 head(us_states_ref)
 ```
 
-Packages that might take avantage of `write_geom_region_locale()` and similar offerings include
-[afrimapr](https://afrimapr.github.io/afrimapr.website/), [geobr](https://ipeagit.github.io/geobr/), [cancensus](https://mountainmath.github.io/cancensus/index.html), [chilemapas](https://pacha.dev/chilemapas/), [RCzechia](https://github.com/jlacko/RCzechia), [geofi](https://ropengov.github.io/geofi/)
-, [geokz](https://github.com/arodionoff/geokz), [mapsPERU](https://github.com/musajajorge/mapsPERU) and [geoidep](https://geografo.pe/geoidep/index.html), [mapSpain](https://github.com/rOpenSpain/mapSpain/), [geographr](https://github.com/britishredcrosssociety/geographr), [geouy](https://github.com/RichDeto/geouy), [tigris](https://github.com/walkerke/tigris),
-and [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries).
- 
 
 Then, authors will be able use `write_geom_region_locale()` to create a regions-specific ggplot2 layer, for example `geom_us_state()` below, which can be made available in their geo packages.
 
@@ -110,7 +105,13 @@ ggplot(data = us_income) +
   geom_us_state()
 ```
 
-Since the geo packages listed above have many users, the impacts of `{ggregions}` could be significant.
+Packages that might take avantage of ggregion's functionality include
+[afrimapr](https://afrimapr.github.io/afrimapr.website/), [geobr](https://ipeagit.github.io/geobr/), [cancensus](https://mountainmath.github.io/cancensus/index.html), [chilemapas](https://pacha.dev/chilemapas/), [RCzechia](https://github.com/jlacko/RCzechia), [geofi](https://ropengov.github.io/geofi/)
+, [geokz](https://github.com/arodionoff/geokz), [mapsPERU](https://github.com/musajajorge/mapsPERU) and [geoidep](https://geografo.pe/geoidep/index.html), [mapSpain](https://github.com/rOpenSpain/mapSpain/), [geographr](https://github.com/britishredcrosssociety/geographr), [geouy](https://github.com/RichDeto/geouy), [tigris](https://github.com/walkerke/tigris),
+and [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries).
+ Since these geo packages have many users, the impacts of `{ggregions}` could be significant.
+
+<details>
 
 
 Dependencies:
@@ -639,3 +640,5 @@ along the way
 How could this be extended / developed in the future by yourself
 and/or the community in general?
 -->
+
+</details>
