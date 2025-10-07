@@ -1,13 +1,38 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
+# {ggregions}
+
+Note: foundation work for this package has been conducted in many
+experiments
+([1](https://evamaerey.github.io/mytidytuesday/2025-09-15-make_constructor_sf/make_constructor_sf.html),
+[2](https://evamaerey.github.io/mytidytuesday/2024-07-12-sf-experiment-fastStat/sf-experiment-fastStat.html),
+[3](https://evamaerey.github.io/mytidytuesday/2024-06-13-usmaps-ggusa/usmaps-ggusa.html),
+[4](https://evamaerey.github.io/mytidytuesday/2024-06-13-usmaps-ggusa/usmaps-ggusa-Stat-and-geom-sf.html),
+[5](https://evamaerey.github.io/mytidytuesday/2024-04-08-statsf_errors/statsf_errors.html),
+[6](https://evamaerey.github.io/mytidytuesday/2023-03-12-ggbrain-seg-sf/ggbrain_seg_sf.html),
+[7](https://evamaerey.github.io/mytidytuesday/2023-03-12-ggbrain-seg-sf/ggbrain_seg_dk_sf.html),
+[8](https://evamaerey.github.io/mytidytuesday/2023-03-10-ggfips/ggfips_w_sf.html),
+[9](https://evamaerey.github.io/mytidytuesday/2023-03-10-ggfips/ggfips.html),
+[10](https://evamaerey.github.io/mytidytuesday/2023-03-10-brain2/brain2.html),
+[11](https://evamaerey.github.io/mytidytuesday/2023-03-09-nc-fips/nc-fips.html),
+[12](https://evamaerey.github.io/mytidytuesday/2023-03-07-extending-your-ability/extending_your_ability.html),
+[13](https://evamaerey.github.io/mytidytuesday/2023-03-06-us-states/us_states.html)
+), [a number of
+discussions](https://github.com/search?q=repo%3Aggplot2-extenders%2Fggplot-extension-club+sf2stat&type=discussions)
+and in conversation based on my
+[talk](https://evamaerey.github.io/mytidytuesday/2023-04-13-ggcircle-pack-talk/circle_pack_and_beyond_talk.html#86)
+in the ggplot2 extenders group, and a couple of experimental packages
+([sf2stat](https://github.com/EvaMaeRey/sf2stat) and
+[ggsomewhere](https://github.com/EvaMaeRey/ggsomewhere)).
+
 # Rationale
 
 > I am told there are people who do not care for maps, and I find it
 > hard to believe. - Robert Louis Stevenson
 
-> My teacher, Mr. Jayson, says a map is a picture of someplace from
-> above. It’s like flying over that spot in an airplane. - ‘Lisa’ in
+> ‘My teacher, Mr. Jayson, says a map is a picture of someplace from
+> above. It’s like flying over that spot in an airplane.’ - ‘Lisa’ in
 > Loreen Leedy’s in ‘Mappying Penny’s World’
 
 > I hate when I work with spatial data that so much of my mindshare goes
@@ -47,29 +72,31 @@ ggplot2(mapping_data) +             # data
    geom_region()                    # layer
 ```
 
-Note: foundational work for this package … \[link to spots where this
-has been discussed and experiments done\]
+# What {ggregions} will deliver
 
-# Proposing {ggregions}
+## Effortlessly write new geom\_\* region-specific functions
 
-A {ggregions} package (in proof of concept phase) will allow geographic
-data package writers to easily create easy-to-use ggplot2 layer
-extensions that adhere to the ggplot2 ‘grammar’.
+The {ggregions} package (in proof-of-concept phase) will allow
+geographic data package writers to quickly create easy-to-use ggplot2
+layer extensions that adhere to the ggplot2 ‘grammar’.
 
-First the authors will prepare a reference dataset that contains a
-geometry column and columns of allowed identifiers for the regions of
-interest. For example, the identifiers from in `us_states_ref` from
-`usmapdata::us_map()`, are `state_name`, `fips` and `state_abbr`.
+First, the authors will prepare a reference dataset that contains a
+[geometry](https://ggplot2.tidyverse.org/reference/ggsf.html#geometry-aesthetic),
+sfc-containing column as well as columns of allowed identifiers for the
+regions of interest. For example, the identifiers from in
+`us_states_ref` from `usmapdata::us_map()`, are `state_name`, `fips` and
+`state_abbr`.
 
 ``` r
 library(dplyr)
 
 # Step 1. prep some of their geo reference data
 us_states_ref <- usmapdata::us_map() |>
-  rename(geometry = geom,  # one column with geometry is required
-         state_name = full, # state_name will positional aes like x or y 
-         state_abbr = abbr) |> # state_abbr will also be optional positional aes like x or y
-  select(state_name, everything())
+  select( state_name = full, # state_name will positional aes like x or y 
+          state_abbr = abbr, 
+          fips,
+          geometry = geom,  # one column with geometry is required
+         )  # state_abbr will also be optional positional aes like x or y
 
 head(us_states_ref)
 #> Simple feature collection with 6 features and 3 fields
@@ -78,14 +105,14 @@ head(us_states_ref)
 #> Bounding box:  xmin: -2590847 ymin: -2608148 xmax: 1433830 ymax: -39564.73
 #> Projected CRS: NAD27 / US National Atlas Equal Area
 #> # A tibble: 6 × 4
-#>   state_name fips  state_abbr                                           geometry
-#>   <chr>      <chr> <chr>                                      <MULTIPOLYGON [m]>
-#> 1 Alaska     02    AK         (((-2396847 -2547721, -2393297 -2546391, -2391552…
-#> 2 Alabama    01    AL         (((1093777 -1378535, 1093269 -1374223, 1092965 -1…
-#> 3 Arkansas   05    AR         (((483065.2 -927788.2, 506062 -926263.3, 531512.5…
-#> 4 Arizona    04    AZ         (((-1388676 -1254584, -1389181 -1251856, -1384522…
-#> 5 California 06    CA         (((-1719946 -1090033, -1709611 -1090026, -1700882…
-#> 6 Colorado   08    CO         (((-789538.7 -678773.8, -789538.2 -678769.5, -781…
+#>   state_name state_abbr fips                                            geometry
+#>   <chr>      <chr>      <chr>                                 <MULTIPOLYGON [m]>
+#> 1 Alaska     AK         02    (((-2396847 -2547721, -2393297 -2546391, -2391552…
+#> 2 Alabama    AL         01    (((1093777 -1378535, 1093269 -1374223, 1092965 -1…
+#> 3 Arkansas   AR         05    (((483065.2 -927788.2, 506062 -926263.3, 531512.5…
+#> 4 Arizona    AZ         04    (((-1388676 -1254584, -1389181 -1251856, -1384522…
+#> 5 California CA         06    (((-1719946 -1090033, -1709611 -1090026, -1700882…
+#> 6 Colorado   CO         08    (((-789538.7 -678773.8, -789538.2 -678769.5, -781…
 ```
 
 Then, authors will be able use `write_geom_region_locale()` to create a
@@ -98,6 +125,8 @@ library(ggregions)
 geom_us_state <- write_geom_region_locale(ref_data = us_states_ref)
 ```
 
+## Deliver intuitive, newcomer-welcoming spatial viz experience
+
 By including the newly specified `geom_` function in their geo data
 package (perhaps instead or in addition to a convenience wrapper that
 are typical of geo packages) the package *users* will be able to use
@@ -105,9 +134,10 @@ the`data + aes + geom` formulation for defining their plots. Instead of
 positional aesthetics like x, y or geometry, a region identifier like
 `state_name` or `fips` can be used. Internally, the regions `geom_*`
 will translate between place name or other identifier to the necessary
-polygons.
+borders (sfcs).
 
-### Some tabular data with geographic region identifiers, but no boundaries
+Below is some tabular data with geographic region identifiers, but no
+boundaries:
 
 ``` r
 us_income <- tidyr::us_rent_income |> 
@@ -126,7 +156,9 @@ head(us_income)
 #> 6 08    Colorado   income    32401   109
 ```
 
-### New syntax: data + position and color mapping + layer
+Even though there is no boundary information, analysts can map this data
+with the familiar data + aesthetic mapping + layer syntax that makes
+ggplot2 so easy to read and write.
 
 ``` r
 library(ggplot2)
