@@ -1,3 +1,4 @@
 ^ggregions\.Rproj$
 ^\.Rproj\.user$
 reynolds_*
+^LICENSE\.md$

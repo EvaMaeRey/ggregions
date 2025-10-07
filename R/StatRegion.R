@@ -1,15 +1,17 @@
-compute_panel_regions <- function(data, scales, ref_data, keep = NULL, drop = NULL, stamp = F){
+# compute just reproduced verbatim from above for packaging purposes
+compute_panel_regions <- function(data, scales, ref_data, keep = NULL, 
+                                  drop = NULL, stamp = F){
 
-ref_data$id <- ref_data[1][[1]]
+  ref_data$id <- ref_data[1][[1]]
 
-if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
-if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
+  if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
+  if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
 
-ref_data <- ref_data |> 
+  ref_data <- ref_data |> 
     ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
     ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
 
-if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
+  if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
 
 }
 

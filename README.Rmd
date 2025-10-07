@@ -1,7 +1,8 @@
 ---
 output: 
   github_document:
-    toc: FALSE
+    toc: TRUE
+    toc_depth: 2
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -14,6 +15,10 @@ knitr::opts_chunk$set(
   warning = F
 )
 ```
+
+<!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
 
 # {ggregions}
 
@@ -36,7 +41,7 @@ and a couple of experimental packages ([sf2stat](https://github.com/EvaMaeRey/sf
 
 
 
-# Rationale
+# Motivations
 
 > I am told there are people who do not care for maps, and I find it hard to believe. - Robert Louis Stevenson
 
@@ -44,9 +49,9 @@ and a couple of experimental packages ([sf2stat](https://github.com/EvaMaeRey/sf
 
 > I hate when I work with spatial data that so much of my mindshare goes to thinking about 'how do I wrangle this this map and what on earth is going on' versus the actual meaning behind what I'm trying to map. - Emily Riederer
 
-Maps are some of the most compelling and intuitive data visualizations, and they are some of the first visualizations people will come across in their lives.  There is great support for mapping in R and data viz library {ggplot2}.  
+Maps are some of the most compelling and intuitive data visualizations, and they are some of the first visualizations people will come across in their lives.  There is great support for mapping in R and in the data vizualization library {ggplot2} which touches many R packages.  
 
-However, producing a simple map, like a choropleth, can feel much more effortful than producing other plots, like a scatterplot for example in ggplot2.  A scatter plot is produced by:
+However, producing a simple map, like a choropleth, can feel much harder than producing other plots, like a scatterplot for example in ggplot2.  A scatter plot is produced by:
 
 ```r 
 ggplot(scatter_data) + # data
@@ -54,11 +59,11 @@ ggplot(scatter_data) + # data
    geom_point()        # layer 
 ```
 
-This proposal posits that by investing in methods to easily create new geo-specific ggplot2 layer extensions (geom_*s), producing maps with ggplot2 can become as intuitive as creating other plot as well as reading the maps themselves. 
+In words, you might say, 'used this data, and points, and the positions are defined by x and y'
 
-> Your API feels like it actually puts the "question" at the center.. - Emily Riederer
+This proposal posits that by investing in methods to easily create new geo-specific ggplot2 layer extensions (geom_*s), producing maps with ggplot2 can become as intuitive as creating other plot as well as reading the maps themselves. About specifying a map, you might say, 'use this data, draw regions, position and color fill according to var1 and var2.'
 
-Proposed regions mapping pseudo code:
+The proposed regions mapping might look something like this:
 
 ```r
 ggplot2(mapping_data) +             # data
@@ -66,6 +71,8 @@ ggplot2(mapping_data) +             # data
        fill = var2) +               # and other visual channel mapping
    geom_region()                    # layer
 ```
+
+> Your API feels like it actually puts the "question" at the center.. - Emily Riederer
 
 
 # What {ggregions} will deliver
@@ -139,26 +146,11 @@ Packages that might take avantage of ggregion's functionality include
 and [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries).
  Since these geo packages have many users, the impacts of `{ggregions}` could be significant.
 
-<details>
+
+# Further disucssion and implementation demonstrations, ideas
 
 
-Dependencies:
-
-- ggplot2
-- sf
-- dplyr (this could be eliminated in the version for the R consortium)
-
-
-Potential direct users:
-
-Many packages that provide geographic data and also provide visualization functionality might find this package useful to provide functionality in the grammar of graphics frame work.
-
-Downstream user perspective (i.e. users of the package that use geom_*() produced with this method): 
-
-
-
-
-## Status Quo: inconsistent apis, or leave the data manipulation to the user
+## Status Quo: Inconsistent APIs or leave the data manipulation to the user.
 
 ```{r, message=F, warning=F, fig.show='hide'}
 library(tidyverse)
@@ -190,10 +182,12 @@ sf_oz |>
 
 
 
+# Alternative: Toward region-specific layer-writing 
 
 
+## Step 1. Define compute
 
-# But awkward, so... Step 1. Compute
+We'll look at the Australian states case as we go, but the ref_data argument will keep thing generic.
 
 ```{r}
 australia_state_ref <- sf_oz |>
@@ -210,8 +204,8 @@ if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
 if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
 
 ref_data <- ref_data |> 
-    ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
-    ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
+    ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |> # add bounding boxes xmin xmax etc
+    ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf) # add x and y centers
 
 if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
 
@@ -219,36 +213,38 @@ if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
 ```
 
 
-# Test Compute
+### Test Compute
 
 ```{r}
 au_states |> 
   rename(state_name = state) |>
   compute_panel_regions(ref_data = australia_state_ref)
-
-ggplot(au_states) +
-  aes(state_name = state) +
-  geom_sf(stat = ggproto(NULL, Stat, 
-                         compute_panel = compute_panel_regions), 
-          ref_data = australia_state_ref) + 
-  aes(fill = pop)
 ```
 
-# Step 2. Define Stat
+To do/consider
+
+-[]warnings about not plot data that fails to find a match in ref data
+-[]allowing multiple geo reference data sets with different resolutions?
+-[]more flexibility on specifying the id column (now it is the first column in the dataset)
+-[]other?
+
+## Step 2. Define Stat
 
 ```{r StatRegion}
-compute_panel_regions <- function(data, scales, ref_data, keep = NULL, drop = NULL, stamp = F){
+# compute just reproduced verbatim from above for packaging purposes
+compute_panel_regions <- function(data, scales, ref_data, keep = NULL, 
+                                  drop = NULL, stamp = F){
 
-ref_data$id <- ref_data[1][[1]]
+  ref_data$id <- ref_data[1][[1]]
 
-if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
-if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
+  if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
+  if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
 
-ref_data <- ref_data |> 
+  ref_data <- ref_data |> 
     ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
     ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
 
-if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
+  if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
 
 }
 
@@ -259,7 +255,13 @@ StatRegion <- ggplot2::ggproto("StatRegion",
                       default_aes = ggplot2::aes(label = ggplot2::after_stat(id)))
 ```
 
-# Test Stat
+### To do/consider
+
+
+-[]Stat won't warn about required_aes, since none are declared.  We anticipate allowed aes to be quite varied.  How otherwise can this be addressed?
+-[]Think through, experiment if compute_group might also work, and if it is preferable
+
+### Test Stat
 
 ```{r}
 ggplot(au_states) +
@@ -270,34 +272,51 @@ ggplot(au_states) +
 ```
 
 
-# Step 3. Define user facing function w/ `make_constructor`... But: coord_sf must be added separately
+### Test Stat X GeomSF w/ `make_constructor()`
+
+We can define user facing function with `make_constructor`. However, for greater usability coord_sf(), is included in the user-facing geom_sf() function, and we will want to do this too. 
 
 ```{r}
-geom_state <- make_constructor(GeomSf, stat = StatRegion, ref_data = australia_state_ref)
-geom_state_text <- make_constructor(GeomText, stat = StatRegion, ref_data = australia_state_ref)
+geom_au_state_no_coords <- 
+  make_constructor(GeomSf, 
+                   stat = StatRegion, 
+                   ref_data = australia_state_ref)
+
+geom_au_state_text_no_coords <- 
+  make_constructor(GeomText, 
+                   stat = StatRegion, 
+                   ref_data = australia_state_ref)
 
 crs_au_states <- sf::st_crs(sf_oz)
 
 ggplot(au_states) +
   aes(state_name = state) + 
-  geom_state() + # errors without coord_sf, and needs the right one
-  geom_state_text(check_overlap = T, size = 2) + 
+  geom_au_state_no_coords() + 
+  geom_au_state_text_no_coords(check_overlap = T, size = 2) + 
   aes(fill = pop) +
   coord_sf(crs = crs_au_states)
 
+
+# Note, in fact, errors w/o coord_sf, and we want to choose the right crs
+# ggplot(au_states) +
+#   aes(state_name = state) + 
+#   geom_au_state_no_coords() 
+
 ```
 
 
-# Step 3.0.1 make geom_region0 (no coords) and friends w/ `make_constructor`... and geom_region (w/ coords)... and friends.
+## Step 3.a Make geom_region0 (no coords) and friends with `make_constructor`
 
 
 ```{r geom_region0, eval = T, error = T}
-geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) # no crs
-stamp_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion, stamp = T, inherit.aes = F) # no crs
-geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion) # no crs
-stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F) # no crs
+geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) 
+stamp_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion, stamp = T, inherit.aes = F)
+geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion)
+stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F)
 ```
 
+
+## Step 3.b Make geom_region (and friends) that brings along coords_sf() (currently not fully argumented)
 
 ```{r}
 # all the arguments *should* be passed, but this for the sake of demo
@@ -323,7 +342,9 @@ stamp_region_text <- function(..., ref_data){
 }
 ```
 
-# Step 4. make region-specific user-facing functions!
+## Step 4. make region-specific user-facing functions!
+
+Not argumented. We'll return to this later.
 
 ```{r}
 # all arguments above that should be passed, could be passed, or, 
@@ -333,10 +354,7 @@ geom_au_states_text <- function(...){geom_region_text(..., ref_data = australia_
 stamp_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
 ```
 
-
-
-
-# test!
+### Test
 
 ```{r}
 au_states |>
@@ -354,11 +372,14 @@ au_states |>
   aes(state_name = state) + 
   geom_au_states(aes(fill = pop)) + 
   stamp_au_states(color = "red", keep = "Western Australia")
-
 ```
 
 
+
+
 ## nc test
+
+<detail>
 
 ```{r}
 nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
@@ -376,11 +397,11 @@ nc_data |>
   geom_nc_county()
 ```
 
+</detail>
 
 
 
-
-# `write_geom_region_locale()`
+## To do... fully argumenting function with the approach used below (or more compact) for `write_geom_region_locale()`
 
 ```{r write_geom_region_locale, eval = T}
 # all the arguments should be passed
@@ -411,7 +432,7 @@ return(geom_region_local)
 ```
 
 
-# Australia example... 
+## Australia example w/ `write_geom_region_locale()`
 
 ```{r}
 geom_au_state <- write_geom_region_locale(ref_data = australia_state_ref)
@@ -426,7 +447,7 @@ au_states |>
 geom_au_state
 ```
 
-# us state example
+## US state example w/ `write_geom_region_locale()`
 
 ```{r}
 us_states_ref <- usmapdata::us_map() |>
@@ -446,12 +467,18 @@ us_rent_income |>
 ```
 
 
-## Minimal packaging...
+# Minimal Packaging
+
+
+### Do once
 
 ```{r, eval = F}
 devtools::create(".")
+usethis::use_mit_license()
+usethis::use_lifecycle_badge("experimental")
 ```
 
+### In manually and in readme
 
 ```{r}
 knitrExtra::chunk_to_dir("StatRegion")
@@ -461,14 +488,17 @@ knitrExtra::chunk_to_dir("write_geom_region_locale")
 usethis::use_package("ggplot2")
 usethis::use_package("sf")
 usethis::use_package("dplyr")
+
+devtools::document()
 ```
 
+
+### Do manually (time consuming)
+
 ```{r, eval = F}
-devtools::document()
 devtools::check(".")
 devtools::install(pkg = ".", upgrade = "never")
 ```
 
 
 
-</details>
