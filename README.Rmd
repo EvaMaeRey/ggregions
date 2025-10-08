@@ -147,7 +147,7 @@ and [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries).
  Since these geo packages have many users, the impacts of `{ggregions}` could be significant.
 
 
-# Further disucssion and implementation demonstrations, ideas
+# Status quo and implementation demonstrations, ideas
 
 
 ## Status Quo: Inconsistent APIs or leave the data manipulation to the user.
@@ -342,16 +342,16 @@ stamp_region_text <- function(..., ref_data){
 }
 ```
 
-## Step 4. make region-specific user-facing functions!
+## Step 4. demo region-specific user-facing functions... just for demonstration purposes!
 
 Not argumented. We'll return to this later.
 
 ```{r}
 # all arguments above that should be passed, could be passed, or, 
 geom_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
-stamp_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
+stamp_au_states <- function(...){stamp_region(..., ref_data = australia_state_ref)}
 geom_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
-stamp_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
+stamp_au_states_text <- function(...){stamp_region_text(..., ref_data = australia_state_ref)}
 ```
 
 ### Test
@@ -361,17 +361,23 @@ au_states |>
 ggplot() +
   aes(state_name = state,
       fill = pop) + 
-  geom_au_states() +
-  geom_au_states(stamp = T,
-              keep = "Tasmania", 
-              fill = "orange") +
-  geom_au_states_text()  
+  geom_au_states(color = "white") +
+  stamp_au_states(keep = "Tasmania", 
+                  fill = "cadetblue1") +
+  stamp_au_states(keep = "Queensland") + 
+  geom_au_states_text(color = "red",
+                      check_overlap = T)  
+
+
+last_plot() + 
+  geom_au_states(fill = "cadetblue1")
 
 au_states |>
   ggplot() +
   aes(state_name = state) + 
   geom_au_states(aes(fill = pop)) + 
-  stamp_au_states(color = "red", keep = "Western Australia")
+  stamp_au_states(color = "red", keep = "Western Australia",
+                  fill = NA, linewidth = 3)
 ```
 
 
@@ -394,39 +400,129 @@ nc_data |>
   ggplot() +
   aes(county_name = NAME,
       fill = AREA) + 
-  geom_nc_county()
+  geom_nc_county(color = "white")
 ```
 
 </detail>
 
 
 
-## To do... fully argumenting function with the approach used below (or more compact) for `write_geom_region_locale()`
+## Coming back to fully argumenting function with the approach used below (or more compact) for `write_geom_region_locale()`
 
 ```{r write_geom_region_locale, eval = T}
 # all the arguments should be passed
-geom_region <- function(mapping = NULL, data = NULL, stat = StatRegion, position = "identity", 
-                        ..., legend = NULL, lineend = "butt", linejoin = "round", 
-    linemitre = 10, arrow = NULL, arrow.fill = NULL, na.rm = FALSE, 
-    show.legend = NA, inherit.aes = TRUE, ref_data){
-  
-  c(geom_region0(mapping = mapping, data = data, stat = stat, 
-        position = position, show.legend = show.legend, inherit.aes = inherit.aes, ref_data = ref_data,
-        params = rlang::list2(na.rm = na.rm, legend = legend, lineend = lineend, 
-            linejoin = linejoin, linemitre = linemitre, arrow = arrow, 
-            arrow.fill = arrow.fill, ...)), 
+# geom_region <- function(mapping = NULL, data = NULL, stat = StatRegion, position = "identity", 
+#                         ..., legend = NULL, lineend = "butt", linejoin = "round", 
+#     linemitre = 10, arrow = NULL, arrow.fill = NULL, na.rm = FALSE, 
+#     show.legend = NA, inherit.aes = TRUE, ref_data){
+#   
+#   c(geom_region0(mapping = mapping, data = data, stat = stat, 
+#         position = position, show.legend = show.legend, inherit.aes = inherit.aes, ref_data = ref_data,
+#         params = rlang::list2(na.rm = na.rm, legend = legend, lineend = lineend, 
+#             linejoin = linejoin, linemitre = linemitre, arrow = arrow, 
+#             arrow.fill = arrow.fill, ...)), 
+#     coord_sf(crs = sf::st_crs(ref_data)))
+#   
+# }
+
+
+geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
+{
+    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, 
+            ...)), 
     coord_sf(crs = sf::st_crs(ref_data)))
-  
 }
+
 
 #' @export
 write_geom_region_locale <- function(ref_data = australia_state_ref){
 
-  geom_region_local <- geom_region
+  modified_fun <- geom_region
 
-formals(geom_region_local)$ref_data <- substitute(ref_data)
+  formals(modified_fun)$ref_data <- substitute(ref_data)
 
-return(geom_region_local)
+  return(modified_fun)
+
+}
+
+
+# all the arguments should be passed
+stamp_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
+{
+    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = T,
+            ...)), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+
+
+#' @export
+write_stamp_region_locale <- function(ref_data = australia_state_ref){
+
+  modified_function <- stamp_region
+
+formals(modified_function)$ref_data <- substitute(ref_data)
+
+return(modified_function)
+
+}
+
+
+# all the arguments should be passed
+geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
+                              position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
+{
+    c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, 
+            ...)), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+
+
+#' @export
+write_geom_region_text_locale <- function(ref_data){
+
+  modified_function <- geom_region_text
+
+formals(modified_function)$ref_data <- substitute(ref_data)
+
+return(modified_function)
+
+}
+
+
+
+# all the arguments should be passed
+# all the arguments should be passed
+stamp_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
+                              position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
+{
+    c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = T,
+            ...)), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+
+#' @export
+write_stamp_region_text_locale <- function(ref_data){
+
+  modified_function <- stamp_region_text
+
+formals(modified_function)$ref_data <- substitute(ref_data)
+
+return(modified_function)
 
 }
 ```
@@ -436,15 +532,17 @@ return(geom_region_local)
 
 ```{r}
 geom_au_state <- write_geom_region_locale(ref_data = australia_state_ref)
-
-geom_au_state
+stamp_au_state <- write_stamp_region_locale(ref_data = australia_state_ref)
+geom_au_state_text <- write_geom_region_text_locale(ref_data = australia_state_ref)
+stamp_au_states_text <- write_stamp_region_text_locale(ref_data = australia_state_ref)
 
 au_states |> 
   ggplot() + 
   aes(state_name = state, fill = pop) + 
-  geom_au_state()
+  stamp_au_state() +
+  geom_au_state(drop = c("Western Australia", "Victoria")) + 
+  geom_au_state(keep = "Tasmania", fill = "cadetblue2")
 
-geom_au_state
 ```
 
 ## US state example w/ `write_geom_region_locale()`
@@ -456,14 +554,20 @@ us_states_ref <- usmapdata::us_map() |>
          state_abbr = abbr) |>
   select(state_name, everything())
   
-geom_us_state <- write_geom_region_locale(ref_data = us_states_ref)
+geom_us_state <- write_geom_region_locale(us_states_ref)
+stamp_us_state <- write_stamp_region_locale(us_states_ref)
+geom_us_state_text <- write_geom_region_text_locale(us_states_ref)
+stamp_us_states_text <- write_stamp_region_text_locale(us_states_ref)
+
 
 us_rent_income |> 
   filter(variable == "income") |>
   ggplot() + 
   aes(state_name = NAME, fill = estimate) + 
   geom_us_state() + 
-  scale_fill_viridis_c(option = "magma")
+  scale_fill_viridis_c(option = "magma") + 
+  stamp_us_states_text(color = "white",
+                       aes(label = after_stat(state_abbr)))
 ```
 
 
