@@ -14,8 +14,15 @@
   layer-writing](#alternative-toward-region-specific-layer-writing)
   - [Step 1. Define compute](#step-1-define-compute)
   - [Step 2. Define Stat](#step-2-define-stat)
-  - [Step 3.a Make geom_region0 (no coords) and friends with
-    `make_constructor`](#step-3a-make-geom_region0-no-coords-and-friends-with-make_constructor)
+  - [Step 3. Create `write_geom_region_locale()` and friends and
+    test](#step-3-create-write_geom_region_locale-and-friends-and-test)
+  - [Australia example w/
+    `write_geom_region_locale()`](#australia-example-w-write_geom_region_locale)
+  - [US state example w/
+    `write_geom_region_locale()`](#us-state-example-w-write_geom_region_locale)
+- [Minimal Packaging](#minimal-packaging)
+  - [Some exploratory work done with
+    `make_constructor`](#some-exploratory-work-done-with-make_constructor)
   - [Step 3.b Make geom_region (and friends) that brings along
     coords_sf() (currently not fully
     argumented)](#step-3b-make-geom_region-and-friends-that-brings-along-coords_sf-currently-not-fully-argumented)
@@ -23,14 +30,6 @@
     demonstration
     purposes!](#step-4-demo-region-specific-user-facing-functions-just-for-demonstration-purposes)
   - [nc test](#nc-test)
-  - [Coming back to fully argumenting function with the approach used
-    below (or more compact) for
-    `write_geom_region_locale()`](#coming-back-to-fully-argumenting-function-with-the-approach-used-below-or-more-compact-for-write_geom_region_locale)
-  - [Australia example w/
-    `write_geom_region_locale()`](#australia-example-w-write_geom_region_locale)
-  - [US state example w/
-    `write_geom_region_locale()`](#us-state-example-w-write_geom_region_locale)
-- [Minimal Packaging](#minimal-packaging)
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 <!-- badges: start -->
@@ -323,10 +322,13 @@ au_states |>
 
 To do/consider
 
--\[\]warnings about not plot data that fails to find a match in ref data
--\[\]allowing multiple geo reference data sets with different
-resolutions? -\[\]more flexibility on specifying the id column (now it
-is the first column in the dataset) -\[\]other?
+- [ ] warnings about not plot data that fails to find a match in ref
+  data
+- [ ] allowing multiple geo reference data sets with different
+  resolutions?
+- [ ] more flexibility on specifying the id column (now it is the first
+  column in the dataset)
+- [ ] other?
 
 ## Step 2. Define Stat
 
@@ -357,10 +359,11 @@ StatRegion <- ggplot2::ggproto("StatRegion",
 
 ### To do/consider
 
--\[\]Stat won’t warn about required_aes, since none are declared. We
-anticipate allowed aes to be quite varied. How otherwise can this be
-addressed? -\[\]Think through, experiment if compute_group might also
-work, and if it is preferable
+- [ ] Stat won’t warn about required_aes, since none are declared. We
+  anticipate allowed aes to be quite varied. How otherwise can this be
+  addressed?
+- [ ] Think through, experiment if compute_group might also work, and if
+  it is preferable
 
 ### Test Stat
 
@@ -396,7 +399,7 @@ crs_au_states <- sf::st_crs(sf_oz)
 ggplot(au_states) +
   aes(state_name = state) + 
   geom_au_state_no_coords() + 
-  geom_au_state_text_no_coords(check_overlap = T, size = 2) + 
+  geom_au_state_text_no_coords(check_overlap = T) + 
   aes(fill = pop) +
   coord_sf(crs = crs_au_states)
 ```
@@ -404,158 +407,22 @@ ggplot(au_states) +
 ![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` r
-
-
 # Note, in fact, errors w/o coord_sf, and we want to choose the right crs
-# ggplot(au_states) +
-#   aes(state_name = state) + 
-#   geom_au_state_no_coords() 
+ggplot(au_states) +
+   aes(state_name = state) + 
+   geom_au_state_no_coords() 
+#> Error in `geom_au_state_no_coords()`:
+#> ! Problem while converting geom to grob.
+#> ℹ Error occurred in the 1st layer.
+#> Caused by error in `draw_panel()`:
+#> ! `geom_sf()` can only be used with `coord_sf()`.
 ```
 
-## Step 3.a Make geom_region0 (no coords) and friends with `make_constructor`
+## Step 3. Create `write_geom_region_locale()` and friends and test
+
+<details Arrow to see details>
 
 ``` r
-geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) 
-stamp_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion, stamp = T, inherit.aes = F)
-geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion)
-stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F)
-```
-
-## Step 3.b Make geom_region (and friends) that brings along coords_sf() (currently not fully argumented)
-
-``` r
-# all the arguments *should* be passed, but this for the sake of demo
-geom_region <- function(..., ref_data){
-  c(geom_region0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
-}
-
-# all the arguments *should* be passed, but this for the sake of demo
-stamp_region <- function(..., ref_data){
-  c(stamp_region0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
-}
-
-geom_region_text <- function(..., ref_data){
-  c(geom_region_text0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
-}
-
-stamp_region_text <- function(..., ref_data){
-  c(stamp_region_text0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
-}
-```
-
-## Step 4. demo region-specific user-facing functions… just for demonstration purposes!
-
-Not argumented. We’ll return to this later.
-
-``` r
-# all arguments above that should be passed, could be passed, or, 
-geom_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
-stamp_au_states <- function(...){stamp_region(..., ref_data = australia_state_ref)}
-geom_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
-stamp_au_states_text <- function(...){stamp_region_text(..., ref_data = australia_state_ref)}
-```
-
-### Test
-
-``` r
-au_states |>
-ggplot() +
-  aes(state_name = state,
-      fill = pop) + 
-  geom_au_states(color = "white") +
-  stamp_au_states(keep = "Tasmania", 
-                  fill = "cadetblue1") +
-  stamp_au_states(keep = "Queensland") + 
-  geom_au_states_text(color = "red",
-                      check_overlap = T)  
-```
-
-![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
-
-``` r
-
-
-last_plot() + 
-  geom_au_states(fill = "cadetblue1")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-15-2.png)<!-- -->
-
-``` r
-
-au_states |>
-  ggplot() +
-  aes(state_name = state) + 
-  geom_au_states(aes(fill = pop)) + 
-  stamp_au_states(color = "red", keep = "Western Australia",
-                  fill = NA, linewidth = 3)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-15-3.png)<!-- -->
-
-## nc test
-
-<detail>
-
-``` r
-nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
-  select(county_name = NAME, fips = FIPS)
-#> Reading layer `nc' from data source 
-#>   `/Library/Frameworks/R.framework/Versions/4.4-x86_64/Resources/library/sf/shape/nc.shp' 
-#>   using driver `ESRI Shapefile'
-#> Simple feature collection with 100 features and 14 fields
-#> Geometry type: MULTIPOLYGON
-#> Dimension:     XY
-#> Bounding box:  xmin: -84.32385 ymin: 33.88199 xmax: -75.45698 ymax: 36.58965
-#> Geodetic CRS:  NAD27
-
-geom_nc_county <- function(...){geom_region(..., ref_data = nc_ref)}
-
-nc_data <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
-  sf::st_drop_geometry()
-#> Reading layer `nc' from data source 
-#>   `/Library/Frameworks/R.framework/Versions/4.4-x86_64/Resources/library/sf/shape/nc.shp' 
-#>   using driver `ESRI Shapefile'
-#> Simple feature collection with 100 features and 14 fields
-#> Geometry type: MULTIPOLYGON
-#> Dimension:     XY
-#> Bounding box:  xmin: -84.32385 ymin: 33.88199 xmax: -75.45698 ymax: 36.58965
-#> Geodetic CRS:  NAD27
-
-nc_data |>
-  ggplot() +
-  aes(county_name = NAME,
-      fill = AREA) + 
-  geom_nc_county(color = "white")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
-
-</detail>
-
-## Coming back to fully argumenting function with the approach used below (or more compact) for `write_geom_region_locale()`
-
-``` r
-# all the arguments should be passed
-# geom_region <- function(mapping = NULL, data = NULL, stat = StatRegion, position = "identity", 
-#                         ..., legend = NULL, lineend = "butt", linejoin = "round", 
-#     linemitre = 10, arrow = NULL, arrow.fill = NULL, na.rm = FALSE, 
-#     show.legend = NA, inherit.aes = TRUE, ref_data){
-#   
-#   c(geom_region0(mapping = mapping, data = data, stat = stat, 
-#         position = position, show.legend = show.legend, inherit.aes = inherit.aes, ref_data = ref_data,
-#         params = rlang::list2(na.rm = na.rm, legend = legend, lineend = lineend, 
-#             linejoin = linejoin, linemitre = linemitre, arrow = arrow, 
-#             arrow.fill = arrow.fill, ...)), 
-#     coord_sf(crs = sf::st_crs(ref_data)))
-#   
-# }
-
-
 geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
 {
@@ -657,9 +524,14 @@ return(modified_function)
 }
 ```
 
+</details>
+
 ## Australia example w/ `write_geom_region_locale()`
 
 ``` r
+australia_state_ref <- sf_oz |>
+  select(state_name = NAME)
+
 geom_au_state <- write_geom_region_locale(ref_data = australia_state_ref)
 stamp_au_state <- write_stamp_region_locale(ref_data = australia_state_ref)
 geom_au_state_text <- write_geom_region_text_locale(ref_data = australia_state_ref)
@@ -670,10 +542,11 @@ au_states |>
   aes(state_name = state, fill = pop) + 
   stamp_au_state() +
   geom_au_state(drop = c("Western Australia", "Victoria")) + 
-  geom_au_state(keep = "Tasmania", fill = "cadetblue2")
+  geom_au_state(keep = "Tasmania", fill = "cadetblue2") + 
+  stamp_au_states_text(keep = "Tasmania")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 ## US state example w/ `write_geom_region_locale()`
 
@@ -700,7 +573,7 @@ us_rent_income |>
                        aes(label = after_stat(state_abbr)))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 # Minimal Packaging
 
@@ -712,7 +585,7 @@ usethis::use_mit_license()
 usethis::use_lifecycle_badge("experimental")
 ```
 
-### In manually and in readme
+### Do manually and in readme
 
 ``` r
 knitrExtra::chunk_to_dir("StatRegion")
@@ -732,3 +605,128 @@ devtools::document()
 devtools::check(".")
 devtools::install(pkg = ".", upgrade = "never")
 ```
+
+## Some exploratory work done with `make_constructor`
+
+<details>
+
+``` r
+geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) 
+stamp_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion, stamp = T, inherit.aes = F)
+geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion)
+stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F)
+```
+
+## Step 3.b Make geom_region (and friends) that brings along coords_sf() (currently not fully argumented)
+
+``` r
+# all the arguments *should* be passed, but this for the sake of demo
+geom_region <- function(..., ref_data){
+  c(geom_region0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+# all the arguments *should* be passed, but this for the sake of demo
+stamp_region <- function(..., ref_data){
+  c(stamp_region0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+geom_region_text <- function(..., ref_data){
+  c(geom_region_text0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+stamp_region_text <- function(..., ref_data){
+  c(stamp_region_text0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+```
+
+## Step 4. demo region-specific user-facing functions… just for demonstration purposes!
+
+Not argumented. We’ll return to this later.
+
+``` r
+# all arguments above that should be passed, could be passed, or, 
+geom_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
+stamp_au_states <- function(...){stamp_region(..., ref_data = australia_state_ref)}
+geom_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
+stamp_au_states_text <- function(...){stamp_region_text(..., ref_data = australia_state_ref)}
+```
+
+### Test
+
+``` r
+au_states |>
+ggplot() +
+  aes(state_name = state,
+      fill = pop) + 
+  geom_au_states(color = "white") +
+  stamp_au_states(keep = "Tasmania", 
+                  fill = "cadetblue1") +
+  stamp_au_states(keep = "Queensland") + 
+  geom_au_states_text(color = "red",
+                      check_overlap = T)  
+```
+
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+
+``` r
+
+
+last_plot() + 
+  geom_au_states(fill = "cadetblue1")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
+
+``` r
+
+au_states |>
+  ggplot() +
+  aes(state_name = state) + 
+  geom_au_states(aes(fill = pop)) + 
+  stamp_au_states(color = "red", keep = "Western Australia",
+                  fill = NA, linewidth = 3)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-21-3.png)<!-- -->
+
+## nc test
+
+``` r
+nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
+  select(county_name = NAME, fips = FIPS)
+#> Reading layer `nc' from data source 
+#>   `/Library/Frameworks/R.framework/Versions/4.4-x86_64/Resources/library/sf/shape/nc.shp' 
+#>   using driver `ESRI Shapefile'
+#> Simple feature collection with 100 features and 14 fields
+#> Geometry type: MULTIPOLYGON
+#> Dimension:     XY
+#> Bounding box:  xmin: -84.32385 ymin: 33.88199 xmax: -75.45698 ymax: 36.58965
+#> Geodetic CRS:  NAD27
+
+geom_nc_county <- function(...){geom_region(..., ref_data = nc_ref)}
+
+nc_data <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
+  sf::st_drop_geometry()
+#> Reading layer `nc' from data source 
+#>   `/Library/Frameworks/R.framework/Versions/4.4-x86_64/Resources/library/sf/shape/nc.shp' 
+#>   using driver `ESRI Shapefile'
+#> Simple feature collection with 100 features and 14 fields
+#> Geometry type: MULTIPOLYGON
+#> Dimension:     XY
+#> Bounding box:  xmin: -84.32385 ymin: 33.88199 xmax: -75.45698 ymax: 36.58965
+#> Geodetic CRS:  NAD27
+
+nc_data |>
+  ggplot() +
+  aes(county_name = NAME,
+      fill = AREA) + 
+  geom_nc_county(color = "white")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+
+</details>

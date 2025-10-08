@@ -12,7 +12,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>", 
   message = F,
-  warning = F
+  warning = F,
+  error = T
 )
 ```
 
@@ -223,10 +224,10 @@ au_states |>
 
 To do/consider
 
--[]warnings about not plot data that fails to find a match in ref data
--[]allowing multiple geo reference data sets with different resolutions?
--[]more flexibility on specifying the id column (now it is the first column in the dataset)
--[]other?
+- [ ] warnings about not plot data that fails to find a match in ref data
+- [ ] allowing multiple geo reference data sets with different resolutions?
+- [ ] more flexibility on specifying the id column (now it is the first column in the dataset)
+- [ ] other?
 
 ## Step 2. Define Stat
 
@@ -258,8 +259,8 @@ StatRegion <- ggplot2::ggproto("StatRegion",
 ### To do/consider
 
 
--[]Stat won't warn about required_aes, since none are declared.  We anticipate allowed aes to be quite varied.  How otherwise can this be addressed?
--[]Think through, experiment if compute_group might also work, and if it is preferable
+- [ ] Stat won't warn about required_aes, since none are declared.  We anticipate allowed aes to be quite varied.  How otherwise can this be addressed?
+- [ ] Think through, experiment if compute_group might also work, and if it is preferable
 
 ### Test Stat
 
@@ -292,140 +293,27 @@ crs_au_states <- sf::st_crs(sf_oz)
 ggplot(au_states) +
   aes(state_name = state) + 
   geom_au_state_no_coords() + 
-  geom_au_state_text_no_coords(check_overlap = T, size = 2) + 
+  geom_au_state_text_no_coords(check_overlap = T) + 
   aes(fill = pop) +
   coord_sf(crs = crs_au_states)
+```
 
 
+```{r}
 # Note, in fact, errors w/o coord_sf, and we want to choose the right crs
-# ggplot(au_states) +
-#   aes(state_name = state) + 
-#   geom_au_state_no_coords() 
+ggplot(au_states) +
+   aes(state_name = state) + 
+   geom_au_state_no_coords() 
 
 ```
 
 
-## Step 3.a Make geom_region0 (no coords) and friends with `make_constructor`
 
+## Step 3.  Create `write_geom_region_locale()` and friends and test
 
-```{r geom_region0, eval = T, error = T}
-geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) 
-stamp_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion, stamp = T, inherit.aes = F)
-geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion)
-stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F)
-```
-
-
-## Step 3.b Make geom_region (and friends) that brings along coords_sf() (currently not fully argumented)
-
-```{r}
-# all the arguments *should* be passed, but this for the sake of demo
-geom_region <- function(..., ref_data){
-  c(geom_region0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
-}
-
-# all the arguments *should* be passed, but this for the sake of demo
-stamp_region <- function(..., ref_data){
-  c(stamp_region0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
-}
-
-geom_region_text <- function(..., ref_data){
-  c(geom_region_text0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
-}
-
-stamp_region_text <- function(..., ref_data){
-  c(stamp_region_text0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
-}
-```
-
-## Step 4. demo region-specific user-facing functions... just for demonstration purposes!
-
-Not argumented. We'll return to this later.
-
-```{r}
-# all arguments above that should be passed, could be passed, or, 
-geom_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
-stamp_au_states <- function(...){stamp_region(..., ref_data = australia_state_ref)}
-geom_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
-stamp_au_states_text <- function(...){stamp_region_text(..., ref_data = australia_state_ref)}
-```
-
-### Test
-
-```{r}
-au_states |>
-ggplot() +
-  aes(state_name = state,
-      fill = pop) + 
-  geom_au_states(color = "white") +
-  stamp_au_states(keep = "Tasmania", 
-                  fill = "cadetblue1") +
-  stamp_au_states(keep = "Queensland") + 
-  geom_au_states_text(color = "red",
-                      check_overlap = T)  
-
-
-last_plot() + 
-  geom_au_states(fill = "cadetblue1")
-
-au_states |>
-  ggplot() +
-  aes(state_name = state) + 
-  geom_au_states(aes(fill = pop)) + 
-  stamp_au_states(color = "red", keep = "Western Australia",
-                  fill = NA, linewidth = 3)
-```
-
-
-
-
-## nc test
-
-<detail>
-
-```{r}
-nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
-  select(county_name = NAME, fips = FIPS)
-
-geom_nc_county <- function(...){geom_region(..., ref_data = nc_ref)}
-
-nc_data <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
-  sf::st_drop_geometry()
-
-nc_data |>
-  ggplot() +
-  aes(county_name = NAME,
-      fill = AREA) + 
-  geom_nc_county(color = "white")
-```
-
-</detail>
-
-
-
-## Coming back to fully argumenting function with the approach used below (or more compact) for `write_geom_region_locale()`
+<details Arrow to see details>
 
 ```{r write_geom_region_locale, eval = T}
-# all the arguments should be passed
-# geom_region <- function(mapping = NULL, data = NULL, stat = StatRegion, position = "identity", 
-#                         ..., legend = NULL, lineend = "butt", linejoin = "round", 
-#     linemitre = 10, arrow = NULL, arrow.fill = NULL, na.rm = FALSE, 
-#     show.legend = NA, inherit.aes = TRUE, ref_data){
-#   
-#   c(geom_region0(mapping = mapping, data = data, stat = stat, 
-#         position = position, show.legend = show.legend, inherit.aes = inherit.aes, ref_data = ref_data,
-#         params = rlang::list2(na.rm = na.rm, legend = legend, lineend = lineend, 
-#             linejoin = linejoin, linemitre = linemitre, arrow = arrow, 
-#             arrow.fill = arrow.fill, ...)), 
-#     coord_sf(crs = sf::st_crs(ref_data)))
-#   
-# }
-
-
 geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
 {
@@ -528,9 +416,15 @@ return(modified_function)
 ```
 
 
+</details>
+
+
 ## Australia example w/ `write_geom_region_locale()`
 
 ```{r}
+australia_state_ref <- sf_oz |>
+  select(state_name = NAME)
+
 geom_au_state <- write_geom_region_locale(ref_data = australia_state_ref)
 stamp_au_state <- write_stamp_region_locale(ref_data = australia_state_ref)
 geom_au_state_text <- write_geom_region_text_locale(ref_data = australia_state_ref)
@@ -541,7 +435,8 @@ au_states |>
   aes(state_name = state, fill = pop) + 
   stamp_au_state() +
   geom_au_state(drop = c("Western Australia", "Victoria")) + 
-  geom_au_state(keep = "Tasmania", fill = "cadetblue2")
+  geom_au_state(keep = "Tasmania", fill = "cadetblue2") + 
+  stamp_au_states_text(keep = "Tasmania")
 
 ```
 
@@ -571,6 +466,12 @@ us_rent_income |>
 ```
 
 
+
+
+
+
+
+
 # Minimal Packaging
 
 
@@ -582,7 +483,7 @@ usethis::use_mit_license()
 usethis::use_lifecycle_badge("experimental")
 ```
 
-### In manually and in readme
+### Do manually and in readme
 
 ```{r}
 knitrExtra::chunk_to_dir("StatRegion")
@@ -604,5 +505,107 @@ devtools::check(".")
 devtools::install(pkg = ".", upgrade = "never")
 ```
 
+
+
+## Some exploratory work done with `make_constructor`
+
+<details>
+
+
+```{r geom_region0, eval = T, error = T}
+geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) 
+stamp_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion, stamp = T, inherit.aes = F)
+geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion)
+stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F)
+```
+
+
+## Step 3.b Make geom_region (and friends) that brings along coords_sf() (currently not fully argumented)
+
+```{r}
+# all the arguments *should* be passed, but this for the sake of demo
+geom_region <- function(..., ref_data){
+  c(geom_region0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+# all the arguments *should* be passed, but this for the sake of demo
+stamp_region <- function(..., ref_data){
+  c(stamp_region0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+geom_region_text <- function(..., ref_data){
+  c(geom_region_text0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+
+stamp_region_text <- function(..., ref_data){
+  c(stamp_region_text0(..., ref_data = ref_data), 
+    coord_sf(crs = sf::st_crs(ref_data)))
+}
+```
+
+## Step 4. demo region-specific user-facing functions... just for demonstration purposes!
+
+Not argumented. We'll return to this later.
+
+```{r}
+# all arguments above that should be passed, could be passed, or, 
+geom_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
+stamp_au_states <- function(...){stamp_region(..., ref_data = australia_state_ref)}
+geom_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
+stamp_au_states_text <- function(...){stamp_region_text(..., ref_data = australia_state_ref)}
+```
+
+### Test
+
+```{r}
+au_states |>
+ggplot() +
+  aes(state_name = state,
+      fill = pop) + 
+  geom_au_states(color = "white") +
+  stamp_au_states(keep = "Tasmania", 
+                  fill = "cadetblue1") +
+  stamp_au_states(keep = "Queensland") + 
+  geom_au_states_text(color = "red",
+                      check_overlap = T)  
+
+
+last_plot() + 
+  geom_au_states(fill = "cadetblue1")
+
+au_states |>
+  ggplot() +
+  aes(state_name = state) + 
+  geom_au_states(aes(fill = pop)) + 
+  stamp_au_states(color = "red", keep = "Western Australia",
+                  fill = NA, linewidth = 3)
+```
+
+
+
+
+## nc test
+
+
+```{r, message=F, warning=F}
+nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
+  select(county_name = NAME, fips = FIPS)
+
+geom_nc_county <- function(...){geom_region(..., ref_data = nc_ref)}
+
+nc_data <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
+  sf::st_drop_geometry()
+
+nc_data |>
+  ggplot() +
+  aes(county_name = NAME,
+      fill = AREA) + 
+  geom_nc_county(color = "white")
+```
+
+</details>
 
 
