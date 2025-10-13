@@ -447,7 +447,7 @@ write_geom_region_locale <- function(ref_data = australia_state_ref){
 
 
 # all the arguments should be passed
-stamp_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+stamp_region <- function (mapping = aes(), data = ref_data, stat = StatRegion, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
 {
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
@@ -500,7 +500,7 @@ return(modified_function)
 
 # all the arguments should be passed
 # all the arguments should be passed
-stamp_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
+stamp_region_text <- function (mapping = aes(), data = ref_data, stat = StatRegion,
                               position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
 {
@@ -547,6 +547,20 @@ au_states |>
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+``` r
+
+library(ggplot2)
+ggplot() + 
+  stamp_au_state() + 
+  stamp_au_state(keep = "Victoria", fill = "blue") + 
+  stamp_au_state(keep = "Western Australia", 
+                 fill = NA,
+                 color = "orange",
+                 linewidth = 2)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-14-2.png)<!-- -->
 
 ## US state example w/ `write_geom_region_locale()`
 

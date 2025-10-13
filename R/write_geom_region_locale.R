@@ -22,7 +22,7 @@ write_geom_region_locale <- function(ref_data = australia_state_ref){
 
 
 # all the arguments should be passed
-stamp_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+stamp_region <- function (mapping = aes(), data = ref_data, stat = StatRegion, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
 {
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
@@ -75,7 +75,7 @@ return(modified_function)
 
 # all the arguments should be passed
 # all the arguments should be passed
-stamp_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
+stamp_region_text <- function (mapping = aes(), data = ref_data, stat = StatRegion,
                               position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
 {
