@@ -23,6 +23,8 @@ knitr::opts_chunk$set(
 
 # {ggregions}
 
+[Link to RMedicine Talk](https://evamaerey.github.io/mytidytuesday/2026-04-03-r-medicine-ggregions/r-medicine-ggregions.html#1)
+
 Note: foundation work for this package has been conducted in many experiments 
 ([1](https://evamaerey.github.io/mytidytuesday/2025-09-15-make_constructor_sf/make_constructor_sf.html),
 [2](https://evamaerey.github.io/mytidytuesday/2024-07-12-sf-experiment-fastStat/sf-experiment-fastStat.html),
@@ -40,6 +42,8 @@ Note: foundation work for this package has been conducted in many experiments
  [a number of discussions](https://github.com/search?q=repo%3Aggplot2-extenders%2Fggplot-extension-club+sf2stat&type=discussions) and in conversation based on my [talk](https://evamaerey.github.io/mytidytuesday/2023-04-13-ggcircle-pack-talk/circle_pack_and_beyond_talk.html#86) in the ggplot2 extenders group,
 and a couple of experimental packages ([sf2stat](https://github.com/EvaMaeRey/sf2stat) and [ggsomewhere](https://github.com/EvaMaeRey/ggsomewhere)).
 
+For an example of how the ggregions utility might be used in a specific geographic context, see [ggusmap](https://github.com/EvaMaeRey/ggusmap), which uses the superb data prepared by [Paolo Di Lorenzo](https://github.com/pdil) for the usmap and usmapdata packages.  
+
 
 
 # Motivations
@@ -50,7 +54,7 @@ and a couple of experimental packages ([sf2stat](https://github.com/EvaMaeRey/sf
 
 > I hate when I work with spatial data that so much of my mindshare goes to thinking about 'how do I wrangle this this map and what on earth is going on' versus the actual meaning behind what I'm trying to map. - Emily Riederer
 
-Maps are some of the most compelling and intuitive data visualizations, and they are some of the first visualizations people will come across in their lives.  There is great support for mapping in R and in the data vizualization library {ggplot2} which touches many R packages.  
+Maps are some of the most compelling and intuitive data visualizations, and they are some of the first visualizations people will come across in their lives.  There is great support for mapping in R and in the data visualization library {ggplot2} which supports many R packages.  
 
 However, producing a simple map, like a choropleth, can feel much harder than producing other plots, like a scatterplot for example in ggplot2.  A scatter plot is produced by:
 
@@ -60,14 +64,14 @@ ggplot(scatter_data) + # data
    geom_point()        # layer 
 ```
 
-In words, you might say, 'used this data, and points, and the positions are defined by x and y'
+In other words, you might say, 'used this data, and points, and the positions are defined by x and y'
 
-This proposal posits that by investing in methods to easily create new geo-specific ggplot2 layer extensions (geom_*s), producing maps with ggplot2 can become as intuitive as creating other plot as well as reading the maps themselves. About specifying a map, you might say, 'use this data, draw regions, position and color fill according to var1 and var2.'
+This proposal posits that by investing in methods to easily create new geo-specific ggplot2 layer extensions (geom_*s), producing maps with ggplot2 can become as intuitive as creating other plots. About specifying a map, you might say, 'use this data, draw regions, position and color fill according to var1 and var2.'
 
 The proposed regions mapping might look something like this:
 
 ```r
-ggplot2(mapping_data) +             # data
+ggplot(mapping_data) +              # data
    aes(region_id = var1_region_id,  # position mapping 
        fill = var2) +               # and other visual channel mapping
    geom_region()                    # layer
@@ -100,12 +104,12 @@ head(us_states_ref)
 ```
 
 
-Then, authors will be able use `write_geom_region_locale()` to create a regions-specific ggplot2 layer, for example `geom_us_state()` below, which can be made available in their geo packages.
+Then, authors will be able use `write_geom_region()` to create a regions-specific ggplot2 layer, for example `geom_us_state()` below, which can be made available in their geo packages.
 
 ```{r}
-# Step 2. use `write_geom_region_locale`
+# Step 2. use `write_geom_region`
 library(ggregions)
-geom_us_state <- write_geom_region_locale(ref_data = us_states_ref)
+geom_us_state <- write_geom_region(ref_data = us_states_ref)
 ```
 
 ## Deliver intuitive, newcomer-welcoming spatial viz experience
@@ -156,6 +160,8 @@ and [rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries).
 ```{r, message=F, warning=F, fig.show='hide'}
 library(tidyverse)
 library(ozmaps)
+sf_oz <- ozmap("states")
+
 
 # some data that we want to viz
 au_states <- tribble(~state, ~pop,
@@ -169,8 +175,6 @@ au_states <- tribble(~state, ~pop,
         "Australian Capital Territory", 8,
         "Other Territories", 9
         )
-
-sf_oz <- ozmap("states")
 
 sf_oz |> names()
 
@@ -233,6 +237,23 @@ To do/consider
 
 ```{r StatRegion}
 # compute just reproduced verbatim from above for packaging purposes
+#' Compute panel regions
+#'
+#' @description
+#' A short description...
+#'
+#' @param data A data frame.
+#' @param scales Scales.
+#' @param ref_data A reference data frame.
+#' @param keep A character vector of IDs to keep. Optional.
+#' @param drop A character vector of IDs to drop. Optional.
+#' @param stamp A single logical value. Optional.
+#'
+#' @returns
+#' A data frame. If `stamp` is `FALSE`, the processed `ref_data` inner-joined with `data`.
+#' Otherwise, the processed `ref_data`.
+#'
+#' @export
 compute_panel_regions <- function(data, scales, ref_data, keep = NULL, 
                                   drop = NULL, stamp = F){
 
@@ -309,11 +330,21 @@ ggplot(au_states) +
 
 
 
-## Step 3.  Create `write_geom_region_locale()` and friends and test
+## Step 3.  Create `write_geom_region()` and friends and test
 
 <details Arrow to see details>
 
-```{r write_geom_region_locale, eval = T}
+```{r write_geom_region, eval = T}
+# when the crs is NULL, st_crs unfortunately returns, na, but we would like it to return NULL
+st_crs_mod <- function(ref_data){
+
+  crs <- sf::st_crs(ref_data)
+  
+  if(is.na(crs)){NULL}else{crs}
+
+}
+
+
 geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
 {
@@ -321,12 +352,12 @@ geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, positi
         stat = stat, position = position, show.legend = show.legend, 
         inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, 
             ...)), 
-    coord_sf(crs = sf::st_crs(ref_data)))
+    coord_sf(crs = st_crs_mod(ref_data)))
 }
 
 
 #' @export
-write_geom_region_locale <- function(ref_data = australia_state_ref){
+write_geom_region <- function(ref_data = australia_state_ref, required_aes = NULL){
 
   modified_fun <- geom_region
 
@@ -345,13 +376,13 @@ stamp_region <- function (mapping = aes(), data = ref_data, stat = StatRegion, p
         stat = stat, position = position, show.legend = show.legend, 
         inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = T,
             ...)), 
-    coord_sf(crs = sf::st_crs(ref_data)))
+    coord_sf(crs = st_crs_mod(ref_data)))
 }
 
 
 
 #' @export
-write_stamp_region_locale <- function(ref_data = australia_state_ref){
+write_stamp_region <- function(ref_data = australia_state_ref, required_aes = NULL){
 
   modified_function <- stamp_region
 
@@ -371,17 +402,17 @@ geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
         stat = stat, position = position, show.legend = show.legend, 
         inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, 
             ...)), 
-    coord_sf(crs = sf::st_crs(ref_data)))
+    coord_sf(crs = st_crs_mod(ref_data)))
 }
 
 
 
 #' @export
-write_geom_region_text_locale <- function(ref_data){
+write_geom_region_text <- function(ref_data, required_aes = NULL){
 
   modified_function <- geom_region_text
 
-formals(modified_function)$ref_data <- substitute(ref_data)
+  formals(modified_function)$ref_data <- substitute(ref_data)
 
 return(modified_function)
 
@@ -399,18 +430,18 @@ stamp_region_text <- function (mapping = aes(), data = ref_data, stat = StatRegi
         stat = stat, position = position, show.legend = show.legend, 
         inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = T,
             ...)), 
-    coord_sf(crs = sf::st_crs(ref_data)))
+    coord_sf(crs = st_crs_mod(ref_data)))
 }
 
 
 #' @export
-write_stamp_region_text_locale <- function(ref_data){
+write_stamp_region_text <- function(ref_data, required_aes = NULL){
 
   modified_function <- stamp_region_text
 
-formals(modified_function)$ref_data <- substitute(ref_data)
+  formals(modified_function)$ref_data <- substitute(ref_data)
 
-return(modified_function)
+  return(modified_function)
 
 }
 ```
@@ -419,22 +450,24 @@ return(modified_function)
 </details>
 
 
-## Australia example w/ `write_geom_region_locale()`
+## Australia example w/ `write_geom_region()`
 
 ```{r}
+sf_oz <- ozmap("states")
+
 australia_state_ref <- sf_oz |>
   select(state_name = NAME)
 
-geom_au_state <- write_geom_region_locale(ref_data = australia_state_ref)
-stamp_au_state <- write_stamp_region_locale(ref_data = australia_state_ref)
-geom_au_state_text <- write_geom_region_text_locale(ref_data = australia_state_ref)
-stamp_au_states_text <- write_stamp_region_text_locale(ref_data = australia_state_ref)
+geom_au_state <- write_geom_region(ref_data = australia_state_ref)
+stamp_au_state <- write_stamp_region(ref_data = australia_state_ref)
+geom_au_state_text <- write_geom_region_text(ref_data = australia_state_ref)
+stamp_au_states_text <- write_stamp_region_text(ref_data = australia_state_ref)
 
 au_states |> 
   ggplot() + 
   aes(state_name = state, fill = pop) + 
   stamp_au_state() +
-  geom_au_state(drop = c("Western Australia", "Victoria")) + 
+  geom_au_state(drop = c("Western Australia", "Victoria")) + #aes(fill = NULL)
   geom_au_state(keep = "Tasmania", fill = "cadetblue2") + 
   stamp_au_states_text(keep = "Tasmania")
 
@@ -448,7 +481,7 @@ ggplot() +
                  linewidth = 2)
 ```
 
-## US state example w/ `write_geom_region_locale()`
+## US state example w/ `write_geom_region()`
 
 ```{r}
 us_states_ref <- usmapdata::us_map() |>
@@ -457,10 +490,10 @@ us_states_ref <- usmapdata::us_map() |>
          state_abbr = abbr) |>
   select(state_name, everything())
   
-geom_us_state <- write_geom_region_locale(us_states_ref)
-stamp_us_state <- write_stamp_region_locale(us_states_ref)
-geom_us_state_text <- write_geom_region_text_locale(us_states_ref)
-stamp_us_states_text <- write_stamp_region_text_locale(us_states_ref)
+geom_us_state <- write_geom_region(us_states_ref)
+stamp_us_state <- write_stamp_region(us_states_ref)
+geom_us_state_text <- write_geom_region_text(us_states_ref)
+stamp_us_states_text <- write_stamp_region_text(us_states_ref)
 
 
 us_rent_income |> 
@@ -487,7 +520,6 @@ us_rent_income |>
 
 ```{r, eval = F}
 devtools::create(".")
-usethis::use_mit_license()
 usethis::use_lifecycle_badge("experimental")
 ```
 
@@ -496,12 +528,13 @@ usethis::use_lifecycle_badge("experimental")
 ```{r}
 knitrExtra::chunk_to_dir("StatRegion")
 knitrExtra::chunk_to_dir("geom_region0")
-knitrExtra::chunk_to_dir("write_geom_region_locale")
+knitrExtra::chunk_to_dir("write_geom_region")
 
 usethis::use_package("ggplot2")
 usethis::use_package("sf")
 usethis::use_package("dplyr")
 
+# rm(list = ls())
 devtools::document()
 ```
 
@@ -521,8 +554,13 @@ devtools::install(pkg = ".", upgrade = "never")
 
 
 ```{r geom_region0, eval = T, error = T}
+GeomSfStamp <- ggplot2::ggproto("GeomSfStamp", ggplot2::GeomSf,
+                       default_aes = modifyList(ggplot2::GeomSf$default_aes, 
+                                                ggplot2::aes(fill = ggplot2::from_theme(scales::col_mix(ink, paper, 0.8))), 
+                                                keep.null = T))
+
 geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) 
-stamp_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion, stamp = T, inherit.aes = F)
+stamp_region0 <- ggplot2::make_constructor(GeomSfStamp, stat = StatRegion, stamp = T, inherit.aes = F)
 geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion)
 stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F)
 ```
@@ -534,23 +572,23 @@ stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRe
 # all the arguments *should* be passed, but this for the sake of demo
 geom_region <- function(..., ref_data){
   c(geom_region0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
+    coord_sf(crs = st_crs_mod(ref_data)))
 }
 
 # all the arguments *should* be passed, but this for the sake of demo
 stamp_region <- function(..., ref_data){
   c(stamp_region0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
+    coord_sf(crs = st_crs_mod(ref_data)))
 }
 
 geom_region_text <- function(..., ref_data){
   c(geom_region_text0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
+    coord_sf(crs = st_crs_mod(ref_data)))
 }
 
 stamp_region_text <- function(..., ref_data){
   c(stamp_region_text0(..., ref_data = ref_data), 
-    coord_sf(crs = sf::st_crs(ref_data)))
+    coord_sf(crs = st_crs_mod(ref_data)))
 }
 ```
 
@@ -569,13 +607,20 @@ stamp_au_states_text <- function(...){stamp_region_text(..., ref_data = australi
 ### Test
 
 ```{r}
+au_states |> 
+  sample_n(5) |> 
+  ggplot() +
+  aes(state_name = state) + 
+  stamp_au_states() +
+  geom_au_states()
+
 au_states |>
 ggplot() +
-  aes(state_name = state,
-      fill = pop) + 
+  aes(state_name = state, fill = pop) + 
   geom_au_states(color = "white") +
   stamp_au_states(keep = "Tasmania", 
-                  fill = "cadetblue1") +
+                  fill = "cadetblue1"
+                  ) +
   stamp_au_states(keep = "Queensland") + 
   geom_au_states_text(color = "red",
                       check_overlap = T)  
