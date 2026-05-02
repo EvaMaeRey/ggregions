@@ -1,14 +1,5 @@
 # when the crs is NULL, st_crs unfortunately returns, na, but we would like it to return NULL
-st_crs_mod <- function(ref_data){
-
-  crs <- sf::st_crs(ref_data)
-  
-  if(is.na(crs)){NULL}else{crs}
-
-}
-
-
-geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+geom_region0 <- function (mapping = aes(), data = NULL, stat = StatRegion0, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
 {
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
@@ -20,9 +11,9 @@ geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, positi
 
 
 #' @export
-write_geom_region <- function(ref_data = australia_state_ref, required_aes = NULL){
+write_geom_region <- function(ref_data, required_aes = NULL){
 
-  modified_fun <- geom_region
+  modified_fun <- geom_region0
 
   formals(modified_fun)$ref_data <- substitute(ref_data)
 
@@ -32,7 +23,7 @@ write_geom_region <- function(ref_data = australia_state_ref, required_aes = NUL
 
 
 # all the arguments should be passed
-stamp_region <- function (mapping = aes(), data = ref_data, stat = StatRegion, position = "identity", 
+stamp_region0 <- function (mapping = aes(), data = ref_data, stat = StatRegion0, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
 {
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
@@ -45,9 +36,9 @@ stamp_region <- function (mapping = aes(), data = ref_data, stat = StatRegion, p
 
 
 #' @export
-write_stamp_region <- function(ref_data = australia_state_ref, required_aes = NULL){
+write_stamp_region <- function(ref_data, required_aes = NULL){
 
-  modified_function <- stamp_region
+  modified_function <- stamp_region0
 
 formals(modified_function)$ref_data <- substitute(ref_data)
 
@@ -57,7 +48,7 @@ return(modified_function)
 
 
 # all the arguments should be passed
-geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
+geom_region_text0 <- function (mapping = aes(), data = NULL, stat = StatRegion0,
                               position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
 {
@@ -73,7 +64,7 @@ geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
 #' @export
 write_geom_region_text <- function(ref_data, required_aes = NULL){
 
-  modified_function <- geom_region_text
+  modified_function <- geom_region_text0
 
   formals(modified_function)$ref_data <- substitute(ref_data)
 
@@ -85,7 +76,7 @@ return(modified_function)
 
 # all the arguments should be passed
 # all the arguments should be passed
-stamp_region_text <- function (mapping = aes(), data = ref_data, stat = StatRegion,
+stamp_region_text0 <- function (mapping = aes(), data = ref_data, stat = StatRegion0,
                               position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
 {
@@ -100,7 +91,7 @@ stamp_region_text <- function (mapping = aes(), data = ref_data, stat = StatRegi
 #' @export
 write_stamp_region_text <- function(ref_data, required_aes = NULL){
 
-  modified_function <- stamp_region_text
+  modified_function <- stamp_region_text0
 
   formals(modified_function)$ref_data <- substitute(ref_data)
 

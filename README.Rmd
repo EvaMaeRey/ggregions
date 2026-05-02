@@ -13,7 +13,8 @@ knitr::opts_chunk$set(
   comment = "#>", 
   message = F,
   warning = F,
-  error = T
+  error = T,
+  cache = F
 )
 ```
 
@@ -82,7 +83,201 @@ ggplot(mapping_data) +              # data
 
 # What {ggregions} will deliver
 
-## Effortlessly write new geom_* region-specific functions
+## 1. A standard interface for visualizing regions and locales.
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r geom_region}
+st_crs_mod <- function(ref_data){
+
+  crs <- sf::st_crs(ref_data)
+  
+  if(is.na(crs)){NULL}else{crs}
+
+}
+
+
+compute_panel_regions <- function (data, scales, ref_data, keep = NULL, drop = NULL, stamp = F) {
+  
+    ref_data$id <- ref_data[1][[1]]
+    
+    if (!is.null(keep)) {
+        ref_data <- dplyr::filter(ref_data, id %in% keep)
+    }
+    
+    if (!is.null(drop)) {
+        ref_data <- dplyr::filter(ref_data, !(id %in% drop))
+    }
+    
+    if (!stamp) {
+    
+          ref_data_long <- ref_data |> pivot_longer(cols = -c(geometry, id), names_to = ".id_type", values_to = "region")
+
+          # check unique
+          length(ref_data_long$region) == length(unique(ref_data_long$region))
+    
+          ref_data_long <- ggplot2::StatSfCoordinates$compute_group(
+      
+          ggplot2::StatSf$compute_panel(ref_data_long, coord = ggplot2::CoordSf), coord = ggplot2::CoordSf)
+        
+          out <- dplyr::inner_join(ref_data_long, data, by = join_by(region)) #|> 
+          
+          ref_data |> sf::st_drop_geometry() |>
+            inner_join(out, by = join_by(id))
+          
+    }
+    
+    else {
+      
+        ref_data |> mutate(region = 1)
+      
+    }
+    
+}
+
+
+StatRegion <- ggplot2::ggproto("StatRegion", ggplot2::Stat,
+                      compute_panel = compute_panel_regions,
+                      default_aes = ggplot2::aes(label = ggplot2::after_stat(region)))
+
+#' @export
+geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion,
+                         position = "identity", 
+                         na.rm = FALSE, show.legend = NA, 
+                         inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...){
+    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data,
+            ...)), coord_sf(crs = st_crs_mod(ref_data))
+      )
+}
+
+
+#' @export
+stamp_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+{
+    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = stamp,
+            ...)), coord_sf(crs = st_crs_mod(ref_data))
+      )
+}
+
+
+GeomSfBorder <- ggplot2::ggproto("GeomSfBorder", ggplot2::GeomSf, 
+                        default_aes = ggplot2::GeomSf$default_aes |>
+                          modifyList(
+                            ggplot2::aes(fill = "transparent", 
+                                         linewidth = ggplot2::from_theme(linewidth*1.5)),
+                            keep.null = T)) 
+
+#' @export
+geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+{
+    c(layer_sf(geom =  GeomSfBorder, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, fill = "transparent",
+            ...)), coord_sf(crs = st_crs_mod(ref_data))
+      )
+}
+
+
+#' @export
+stamp_region_border <- function (mapping = aes(), data = NULL, 
+                          stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+{
+    c(layer_sf(geom = GeomSfBorder, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = stamp, fill = "transparent",
+            ...)), coord_sf(crs = st_crs_mod(ref_data))
+      )
+}
+
+#' @export
+geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+{
+    c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data,
+            ...)), coord_sf(crs = st_crs_mod(ref_data))
+      )
+}
+
+
+#' @export
+stamp_region_text <- function (mapping = aes(), data = NULL, 
+                          stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+{
+    c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = stamp,
+            ...)), coord_sf(crs = st_crs_mod(ref_data))
+      )
+}
+
+#' @export
+geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+{
+    c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data,
+            ...)), coord_sf(crs = st_crs_mod(ref_data))
+      )
+}
+
+#' @export
+stamp_region_label <- function (mapping = aes(), data = NULL, 
+                          stat = StatRegion, position = "identity", 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+{
+    c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
+        stat = stat, position = position, show.legend = show.legend, 
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = stamp,
+            ...)), coord_sf(crs = st_crs_mod(ref_data))
+      )
+}
+
+```
+
+
+
+```{r}
+nc <- sf::st_read(system.file("shape/nc.shp", package="sf"))
+
+nc
+
+nc_ref <- nc |> 
+  select(county_name = NAME, 
+         county_fips = FIPS, 
+         geometry)
+
+nc_ref |> options(ggregions.ref.regions = _)
+
+tribble(~county, ~ind_going,
+        "Ashe",           1,
+        "Northampton",    0
+        ) |>
+  ggplot() + 
+  aes(region = county,
+      fill = ind_going) + 
+  stamp_region() +
+  geom_region()
+
+
+```
+
+## 2. Two-step workflow 
+
+### i. Effortlessly write new geom_* region-specific functions
 
 The {ggregions} package (in proof-of-concept phase) will allow geographic data package writers to quickly create easy-to-use ggplot2 layer extensions that adhere to the ggplot2 'grammar'.
 
@@ -112,7 +307,7 @@ library(ggregions)
 geom_us_state <- write_geom_region(ref_data = us_states_ref)
 ```
 
-## Deliver intuitive, newcomer-welcoming spatial viz experience
+### ii. Deliver intuitive, newcomer-welcoming spatial viz experience
 
 By including the newly specified `geom_` function in their geo data package (perhaps instead or in addition to a convenience wrapper that are typical of geo packages) the package *users* will be able to use the` data + aes + geom` formulation for defining their plots.  Instead of positional aesthetics like x, y or geometry, a region identifier like `state_name` or `fips` can be used.  Internally, the regions `geom_*` will translate between place name or other identifier to the necessary borders (`sfc`s).
 
@@ -203,16 +398,16 @@ australia_state_ref <- sf_oz |>
 ```{r}
 compute_panel_regions <- function(data, scales, ref_data, keep = NULL, drop = NULL, stamp = F){
 
-ref_data$id <- ref_data[1][[1]]
+  ref_data$id <- ref_data[1][[1]]
 
-if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
-if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
+  if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
+  if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
 
-ref_data <- ref_data |> 
-    ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |> # add bounding boxes xmin xmax etc
-    ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf) # add x and y centers
+  ref_data <- ref_data |> 
+     ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |> # add bounding boxes xmin xmax etc
+     ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf) # add x and y centers
 
-if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
+  if(!stamp){ ref_data |> dplyr::inner_join(data) } else {ref_data}
 
 }
 ```
@@ -235,7 +430,7 @@ To do/consider
 
 ## Step 2. Define Stat
 
-```{r StatRegion}
+```{r StatRegion0}
 # compute just reproduced verbatim from above for packaging purposes
 #' Compute panel regions
 #'
@@ -254,7 +449,7 @@ To do/consider
 #' Otherwise, the processed `ref_data`.
 #'
 #' @export
-compute_panel_regions <- function(data, scales, ref_data, keep = NULL, 
+compute_panel_regions0 <- function(data, scales, ref_data, keep = NULL, 
                                   drop = NULL, stamp = F){
 
   ref_data$id <- ref_data[1][[1]]
@@ -271,14 +466,14 @@ compute_panel_regions <- function(data, scales, ref_data, keep = NULL,
 }
 
 
-StatRegion <- ggplot2::ggproto("StatRegion",
+StatRegion0 <- ggplot2::ggproto("StatRegion0",
                       ggplot2::Stat,
-                      compute_panel = compute_panel_regions,
-                      default_aes = ggplot2::aes(label = ggplot2::after_stat(id)))
+                      compute_panel = compute_panel_regions0,
+                      default_aes = 
+                        ggplot2::aes(label = ggplot2::after_stat(id)))
 ```
 
 ### To do/consider
-
 
 - [ ] Stat won't warn about required_aes, since none are declared.  We anticipate allowed aes to be quite varied.  How otherwise can this be addressed?
 - [ ] Think through, experiment if compute_group might also work, and if it is preferable
@@ -288,8 +483,8 @@ StatRegion <- ggplot2::ggproto("StatRegion",
 ```{r}
 ggplot(au_states) +
   aes(state_name = state) +
-  geom_sf(stat = StatRegion, ref_data = australia_state_ref) + 
-  geom_text(stat = StatRegion, ref_data = australia_state_ref) +
+  geom_sf(stat = StatRegion0, ref_data = australia_state_ref) + 
+  geom_text(stat = StatRegion0, ref_data = australia_state_ref) +
   aes(fill = pop)
 ```
 
@@ -301,12 +496,12 @@ We can define user facing function with `make_constructor`. However, for greater
 ```{r}
 geom_au_state_no_coords <- 
   make_constructor(GeomSf, 
-                   stat = StatRegion, 
+                   stat = StatRegion0, 
                    ref_data = australia_state_ref)
 
 geom_au_state_text_no_coords <- 
   make_constructor(GeomText, 
-                   stat = StatRegion, 
+                   stat = StatRegion0, 
                    ref_data = australia_state_ref)
 
 crs_au_states <- sf::st_crs(sf_oz)
@@ -336,16 +531,7 @@ ggplot(au_states) +
 
 ```{r write_geom_region, eval = T}
 # when the crs is NULL, st_crs unfortunately returns, na, but we would like it to return NULL
-st_crs_mod <- function(ref_data){
-
-  crs <- sf::st_crs(ref_data)
-  
-  if(is.na(crs)){NULL}else{crs}
-
-}
-
-
-geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
+geom_region0 <- function (mapping = aes(), data = NULL, stat = StatRegion0, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
 {
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
@@ -357,9 +543,9 @@ geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion, positi
 
 
 #' @export
-write_geom_region <- function(ref_data = australia_state_ref, required_aes = NULL){
+write_geom_region <- function(ref_data, required_aes = NULL){
 
-  modified_fun <- geom_region
+  modified_fun <- geom_region0
 
   formals(modified_fun)$ref_data <- substitute(ref_data)
 
@@ -369,7 +555,7 @@ write_geom_region <- function(ref_data = australia_state_ref, required_aes = NUL
 
 
 # all the arguments should be passed
-stamp_region <- function (mapping = aes(), data = ref_data, stat = StatRegion, position = "identity", 
+stamp_region0 <- function (mapping = aes(), data = ref_data, stat = StatRegion0, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
 {
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
@@ -382,9 +568,9 @@ stamp_region <- function (mapping = aes(), data = ref_data, stat = StatRegion, p
 
 
 #' @export
-write_stamp_region <- function(ref_data = australia_state_ref, required_aes = NULL){
+write_stamp_region <- function(ref_data, required_aes = NULL){
 
-  modified_function <- stamp_region
+  modified_function <- stamp_region0
 
 formals(modified_function)$ref_data <- substitute(ref_data)
 
@@ -394,7 +580,7 @@ return(modified_function)
 
 
 # all the arguments should be passed
-geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
+geom_region_text0 <- function (mapping = aes(), data = NULL, stat = StatRegion0,
                               position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
 {
@@ -410,7 +596,7 @@ geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion,
 #' @export
 write_geom_region_text <- function(ref_data, required_aes = NULL){
 
-  modified_function <- geom_region_text
+  modified_function <- geom_region_text0
 
   formals(modified_function)$ref_data <- substitute(ref_data)
 
@@ -422,7 +608,7 @@ return(modified_function)
 
 # all the arguments should be passed
 # all the arguments should be passed
-stamp_region_text <- function (mapping = aes(), data = ref_data, stat = StatRegion,
+stamp_region_text0 <- function (mapping = aes(), data = ref_data, stat = StatRegion0,
                               position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
 {
@@ -437,7 +623,7 @@ stamp_region_text <- function (mapping = aes(), data = ref_data, stat = StatRegi
 #' @export
 write_stamp_region_text <- function(ref_data, required_aes = NULL){
 
-  modified_function <- stamp_region_text
+  modified_function <- stamp_region_text0
 
   formals(modified_function)$ref_data <- substitute(ref_data)
 
@@ -526,7 +712,8 @@ usethis::use_lifecycle_badge("experimental")
 ### Do manually and in readme
 
 ```{r}
-knitrExtra::chunk_to_dir("StatRegion")
+knitrExtra::chunk_to_dir("geom_region")
+knitrExtra::chunk_to_dir("StatRegion0")
 knitrExtra::chunk_to_dir("geom_region0")
 knitrExtra::chunk_to_dir("write_geom_region")
 
@@ -548,7 +735,7 @@ devtools::install(pkg = ".", upgrade = "never")
 
 
 
-## Some exploratory work done with `make_constructor`
+## Just for fun, so code showing some exploratory work done with `make_constructor`
 
 <details>
 
@@ -559,10 +746,10 @@ GeomSfStamp <- ggplot2::ggproto("GeomSfStamp", ggplot2::GeomSf,
                                                 ggplot2::aes(fill = ggplot2::from_theme(scales::col_mix(ink, paper, 0.8))), 
                                                 keep.null = T))
 
-geom_region0 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion) 
-stamp_region0 <- ggplot2::make_constructor(GeomSfStamp, stat = StatRegion, stamp = T, inherit.aes = F)
-geom_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion)
-stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion, stamp = T, inherit.aes = F)
+geom_region00 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion0) 
+stamp_region00 <- ggplot2::make_constructor(GeomSfStamp, stat = StatRegion0, stamp = T, inherit.aes = F)
+geom_region_text00 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion0)
+stamp_region_text00 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion0, stamp = T, inherit.aes = F)
 ```
 
 
@@ -570,24 +757,24 @@ stamp_region_text0 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRe
 
 ```{r}
 # all the arguments *should* be passed, but this for the sake of demo
-geom_region <- function(..., ref_data){
-  c(geom_region0(..., ref_data = ref_data), 
+geom_regionX <- function(..., ref_data){
+  c(geom_region00(..., ref_data = ref_data), 
     coord_sf(crs = st_crs_mod(ref_data)))
 }
 
 # all the arguments *should* be passed, but this for the sake of demo
-stamp_region <- function(..., ref_data){
-  c(stamp_region0(..., ref_data = ref_data), 
+stamp_regionX <- function(..., ref_data){
+  c(stamp_region00(..., ref_data = ref_data), 
     coord_sf(crs = st_crs_mod(ref_data)))
 }
 
-geom_region_text <- function(..., ref_data){
-  c(geom_region_text0(..., ref_data = ref_data), 
+geom_region_textX <- function(..., ref_data){
+  c(geom_region_text00(..., ref_data = ref_data), 
     coord_sf(crs = st_crs_mod(ref_data)))
 }
 
-stamp_region_text <- function(..., ref_data){
-  c(stamp_region_text0(..., ref_data = ref_data), 
+stamp_region_textX <- function(..., ref_data){
+  c(stamp_region_text00(..., ref_data = ref_data), 
     coord_sf(crs = st_crs_mod(ref_data)))
 }
 ```
@@ -598,10 +785,10 @@ Not argumented. We'll return to this later.
 
 ```{r}
 # all arguments above that should be passed, could be passed, or, 
-geom_au_states <- function(...){geom_region(..., ref_data = australia_state_ref)}
-stamp_au_states <- function(...){stamp_region(..., ref_data = australia_state_ref)}
-geom_au_states_text <- function(...){geom_region_text(..., ref_data = australia_state_ref)}
-stamp_au_states_text <- function(...){stamp_region_text(..., ref_data = australia_state_ref)}
+geom_au_states <- function(...){geom_regionX(..., ref_data = australia_state_ref)}
+stamp_au_states <- function(...){stamp_regionX(..., ref_data = australia_state_ref)}
+geom_au_states_text <- function(...){geom_region_textX(..., ref_data = australia_state_ref)}
+stamp_au_states_text <- function(...){stamp_region_textX(..., ref_data = australia_state_ref)}
 ```
 
 ### Test
@@ -640,24 +827,7 @@ au_states |>
 
 
 
-## nc test
 
-
-```{r, message=F, warning=F}
-nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
-  select(county_name = NAME, fips = FIPS)
-
-geom_nc_county <- function(...){geom_region(..., ref_data = nc_ref)}
-
-nc_data <- sf::st_read(system.file("shape/nc.shp", package="sf")) |>
-  sf::st_drop_geometry()
-
-nc_data |>
-  ggplot() +
-  aes(county_name = NAME,
-      fill = AREA) + 
-  geom_nc_county(color = "white")
-```
 
 </details>
 

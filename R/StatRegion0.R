@@ -16,7 +16,7 @@
 #' Otherwise, the processed `ref_data`.
 #'
 #' @export
-compute_panel_regions <- function(data, scales, ref_data, keep = NULL, 
+compute_panel_regions0 <- function(data, scales, ref_data, keep = NULL, 
                                   drop = NULL, stamp = F){
 
   ref_data$id <- ref_data[1][[1]]
@@ -33,8 +33,8 @@ compute_panel_regions <- function(data, scales, ref_data, keep = NULL,
 }
 
 
-StatRegion <- ggplot2::ggproto("StatRegion",
+StatRegion0 <- ggplot2::ggproto("StatRegion0",
                       ggplot2::Stat,
-                      compute_panel = compute_panel_regions,
+                      compute_panel = compute_panel_regions0,
                       default_aes = 
                         ggplot2::aes(label = ggplot2::after_stat(id)))
