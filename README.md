@@ -1,33 +1,27 @@
 
 - [{ggregions}](#ggregions)
 - [Motivations](#motivations)
-- [What {ggregions} will deliver](#what-ggregions-will-deliver)
-  - [1. A standard interface for visualizing regions and
-    locales.](#1-a-standard-interface-for-visualizing-regions-and-locales)
-  - [2. Two-step workflow](#2-two-step-workflow)
-- [Status quo and implementation demonstrations,
-  ideas](#status-quo-and-implementation-demonstrations-ideas)
-  - [Status Quo: Inconsistent APIs or leave the data manipulation to the
-    user.](#status-quo-inconsistent-apis-or-leave-the-data-manipulation-to-the-user)
-- [Alternative: Toward region-specific
-  layer-writing](#alternative-toward-region-specific-layer-writing)
-  - [Step 1. Define compute](#step-1-define-compute)
-  - [Step 2. Define Stat](#step-2-define-stat)
-  - [Step 3. Create `write_geom_region()` and friends and
-    test](#step-3-create-write_geom_region-and-friends-and-test)
-  - [Australia example w/
-    `write_geom_region()`](#australia-example-w-write_geom_region)
-  - [US state example w/
-    `write_geom_region()`](#us-state-example-w-write_geom_region)
+  - [Status Quo (without ggregions): Leave the data manipulation to the
+    user, or wrapper
+    APIs](#status-quo-without-ggregions-leave-the-data-manipulation-to-the-user-or-wrapper-apis)
+- [What {ggregions} delivers](#what-ggregions-delivers)
+  - [Interface \#1. Standard interface for visualizing regions and
+    locales, `aes(region = my_var) + geom_region()` where scope of
+    interest is declared via
+    `options()`.](#interface-1-standard-interface-for-visualizing-regions-and-locales-aesregion--my_var--geom_region-where-scope-of-interest-is-declared-via-options)
+    - [North Carolina example](#north-carolina-example)
+    - [Australia example](#australia-example)
+  - [Interface \#2. use write\_\*() functions to specify reference data
+    for
+    layers.](#interface-2-use-write_-functions-to-specify-reference-data-for-layers)
+    - [North Carolina example](#north-carolina-example-1)
+    - [US example](#us-example)
 - [Minimal Packaging](#minimal-packaging)
-  - [Just for fun, so code showing some exploratory work done with
-    `make_constructor`](#just-for-fun-so-code-showing-some-exploratory-work-done-with-make_constructor)
-  - [Step 3.b Make geom_region (and friends) that brings along
-    coords_sf() (currently not fully
-    argumented)](#step-3b-make-geom_region-and-friends-that-brings-along-coords_sf-currently-not-fully-argumented)
-  - [Step 4. demo region-specific user-facing functions… just for
-    demonstration
-    purposes!](#step-4-demo-region-specific-user-facing-functions-just-for-demonstration-purposes)
+  - [Do once](#do-once)
+  - [Do manually and in readme](#do-manually-and-in-readme)
+  - [Do manually (time consuming)](#do-manually-time-consuming)
+- [Previous, recent implementation and experiments, see
+  source](#previous-recent-implementation-and-experiments-see-source)
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
@@ -39,8 +33,8 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 
 # {ggregions}
 
-[Link to RMedicine
-Talk](https://evamaerey.github.io/mytidytuesday/2026-04-03-r-medicine-ggregions/r-medicine-ggregions.html#1)
+R Medicine Talk
+[slides](https://evamaerey.github.io/mytidytuesday/2026-04-03-r-medicine-ggregions/r-medicine-ggregions.html#1)
 
 Note: foundation work for this package has been conducted in many
 experiments
@@ -112,7 +106,7 @@ The proposed regions mapping might look something like this:
 
 ``` r
 ggplot(mapping_data) +              # data
-   aes(region_id = var1_region_id,  # position mapping 
+   aes(region = var1_region_id,  # position mapping 
        fill = var2) +               # and other visual channel mapping
    geom_region()                    # layer
 ```
@@ -120,13 +114,47 @@ ggplot(mapping_data) +              # data
 > Your API feels like it actually puts the “question” at the center.. -
 > Emily Riederer
 
-# What {ggregions} will deliver
+## Status Quo (without ggregions): Leave the data manipulation to the user, or wrapper APIs
 
-## 1. A standard interface for visualizing regions and locales.
+``` r
+library(tidyverse)
+library(ozmaps)
+sf_oz <- ozmap("states")
+```
+
+``` r
+# some data that we want to viz
+au_states <- tribble(~state, ~pop,
+        "Victoria", 1,
+        "Queensland", 2,
+        "New South Wales", 3,
+        "Western Australia", 4,
+        "Northern Territory", 5,
+        "Tasmania", 6,
+        "South Australia", 7,
+        "Australian Capital Territory", 8,
+        "Other Territories", 9
+        )
+
+sf_oz |>
+  full_join(au_states, by = join_by(NAME == state )) |> 
+  ggplot() + 
+  aes(geometry = geometry, 
+      fill = pop) + 
+  geom_sf()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+
+# What {ggregions} delivers
+
+## Interface \#1. Standard interface for visualizing regions and locales, `aes(region = my_var) + geom_region()` where scope of interest is declared via `options()`.
 
 ``` r
 library(tidyverse)
 ```
+
+<details>
 
 ``` r
 st_crs_mod <- function(ref_data){
@@ -152,16 +180,20 @@ compute_panel_regions <- function (data, scales, ref_data, keep = NULL, drop = N
     
     if (!stamp) {
     
-          ref_data_long <- ref_data |> pivot_longer(cols = -c(geometry, id), names_to = ".id_type", values_to = "region")
+          ref_data_long <- ref_data |> 
+            mutate(across(-geometry, as.character)) |>
+            pivot_longer(cols = -c(geometry, id), 
+                         names_to = ".id_type", 
+                         values_to = "region")
 
-          # check unique
+          # check unique in the future
           length(ref_data_long$region) == length(unique(ref_data_long$region))
     
-          ref_data_long <- ggplot2::StatSfCoordinates$compute_group(
-      
-          ggplot2::StatSf$compute_panel(ref_data_long, coord = ggplot2::CoordSf), coord = ggplot2::CoordSf)
+          ref_data_long <- ref_data_long |> 
+            ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
+            ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
         
-          out <- dplyr::inner_join(ref_data_long, data, by = join_by(region)) #|> 
+          out <- dplyr::inner_join(ref_data_long, data, by = join_by(region)) 
           
           ref_data |> sf::st_drop_geometry() |>
             inner_join(out, by = join_by(id))
@@ -170,7 +202,9 @@ compute_panel_regions <- function (data, scales, ref_data, keep = NULL, drop = N
     
     else {
       
-        ref_data |> mutate(region = 1)
+        ref_data |> 
+            ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
+            ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
       
     }
     
@@ -179,10 +213,18 @@ compute_panel_regions <- function (data, scales, ref_data, keep = NULL, drop = N
 
 StatRegion <- ggplot2::ggproto("StatRegion", ggplot2::Stat,
                       compute_panel = compute_panel_regions,
-                      default_aes = ggplot2::aes(label = ggplot2::after_stat(region)))
+                      required_aes = "region",
+                      default_aes = ggplot2::aes(label = ggplot2::after_stat(id),
+                                                 geometry = geometry))
+
+StatRegionStamp <- ggplot2::ggproto("StatRegionStamp", ggplot2::Stat,
+                      compute_panel = compute_panel_regions,
+                      default_aes = ggplot2::aes(label = ggplot2::after_stat(id),
+                                                 geometry = geometry))
 
 #' @export
-geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion,
+geom_region <- function (mapping = aes(), data = NULL, 
+                         stat = StatRegion,
                          position = "identity", 
                          na.rm = FALSE, show.legend = NA, 
                          inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...){
@@ -195,12 +237,15 @@ geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion,
 
 
 #' @export
-stamp_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+stamp_region <- function (mapping = aes(), stat = StatRegionStamp, 
+                          position = "identity", 
+                          na.rm = FALSE, show.legend = NA, 
+                          inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
 {
-    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
+    c(layer_sf(geom = GeomSf, data = ref_data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = stamp,
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, 
+                                                         ref_data = ref_data, stamp = T,
             ...)), coord_sf(crs = st_crs_mod(ref_data))
       )
 }
@@ -226,8 +271,8 @@ geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion,
 
 
 #' @export
-stamp_region_border <- function (mapping = aes(), data = NULL, 
-                          stat = StatRegion, position = "identity", 
+stamp_region_border <- function (mapping = aes(), data = ref_data, 
+                          stat = StatRegionStamp, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomSfBorder, data = data, mapping = mapping, 
@@ -250,8 +295,8 @@ geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, p
 
 
 #' @export
-stamp_region_text <- function (mapping = aes(), data = NULL, 
-                          stat = StatRegion, position = "identity", 
+stamp_region_text <- function (mapping = aes(), data = ref_data, 
+                          stat = StatRegionStamp, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
@@ -273,8 +318,8 @@ geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, 
 }
 
 #' @export
-stamp_region_text <- function (mapping = aes(), data = NULL, 
-                          stat = StatRegion, position = "identity", 
+stamp_region_label <- function (mapping = aes(), data = ref_data, 
+                          stat = StatRegionStamp, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
@@ -285,7 +330,20 @@ stamp_region_text <- function (mapping = aes(), data = NULL,
 }
 ```
 
+</details>
+
+### North Carolina example
+
+First, the authors will prepare a reference dataset that contains a
+[geometry](https://ggplot2.tidyverse.org/reference/ggsf.html#geometry-aesthetic),
+sfc-containing column as well as columns of allowed identifiers for the
+regions of interest. For example, the identifiers from in `nc_ref` are
+`county_name` and `county_fips`.
+
 ``` r
+# Interface #1
+
+# Step 1.a Create reference data set
 nc <- sf::st_read(system.file("shape/nc.shp", package="sf"))
 #> Reading layer `nc' from data source 
 #>   `/Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/sf/shape/nc.shp' 
@@ -296,42 +354,208 @@ nc <- sf::st_read(system.file("shape/nc.shp", package="sf"))
 #> Bounding box:  xmin: -84.32385 ymin: 33.88199 xmax: -75.45698 ymax: 36.58965
 #> Geodetic CRS:  NAD27
 
-nc
-#> Simple feature collection with 100 features and 14 fields
-#> Geometry type: MULTIPOLYGON
-#> Dimension:     XY
-#> Bounding box:  xmin: -84.32385 ymin: 33.88199 xmax: -75.45698 ymax: 36.58965
-#> Geodetic CRS:  NAD27
-#> First 10 features:
-#>     AREA PERIMETER CNTY_ CNTY_ID        NAME  FIPS FIPSNO CRESS_ID BIR74 SID74
-#> 1  0.114     1.442  1825    1825        Ashe 37009  37009        5  1091     1
-#> 2  0.061     1.231  1827    1827   Alleghany 37005  37005        3   487     0
-#> 3  0.143     1.630  1828    1828       Surry 37171  37171       86  3188     5
-#> 4  0.070     2.968  1831    1831   Currituck 37053  37053       27   508     1
-#> 5  0.153     2.206  1832    1832 Northampton 37131  37131       66  1421     9
-#> 6  0.097     1.670  1833    1833    Hertford 37091  37091       46  1452     7
-#> 7  0.062     1.547  1834    1834      Camden 37029  37029       15   286     0
-#> 8  0.091     1.284  1835    1835       Gates 37073  37073       37   420     0
-#> 9  0.118     1.421  1836    1836      Warren 37185  37185       93   968     4
-#> 10 0.124     1.428  1837    1837      Stokes 37169  37169       85  1612     1
-#>    NWBIR74 BIR79 SID79 NWBIR79                       geometry
-#> 1       10  1364     0      19 MULTIPOLYGON (((-81.47276 3...
-#> 2       10   542     3      12 MULTIPOLYGON (((-81.23989 3...
-#> 3      208  3616     6     260 MULTIPOLYGON (((-80.45634 3...
-#> 4      123   830     2     145 MULTIPOLYGON (((-76.00897 3...
-#> 5     1066  1606     3    1197 MULTIPOLYGON (((-77.21767 3...
-#> 6      954  1838     5    1237 MULTIPOLYGON (((-76.74506 3...
-#> 7      115   350     2     139 MULTIPOLYGON (((-76.00897 3...
-#> 8      254   594     2     371 MULTIPOLYGON (((-76.56251 3...
-#> 9      748  1190     2     844 MULTIPOLYGON (((-78.30876 3...
-#> 10     160  2038     5     176 MULTIPOLYGON (((-80.02567 3...
+nc_ref <- nc |> 
+  select(county_name = NAME, 
+         county_fips = FIPS, 
+         geometry)
+```
 
+``` r
+# Step 1.b Declare reference data in options
+options(ggregions.ref.regions = nc_ref)
+```
+
+``` r
+# Step 2. Plot! Use aes(region = my_var_regional_id) + geom_region()
+tribble(~county, ~ind_going,
+        "Ashe",           1,
+        "Northampton",    0
+        ) |>
+  ggplot() + 
+  aes(region = county,
+      fill = ind_going) +
+  stamp_region()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+``` r
+
+last_plot() +
+  geom_region()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
+
+### Australia example
+
+``` r
+## Step 1a Prep reference data
+library(ozmaps)
+sf_oz <- ozmap("states")
+
+australia_state_ref <- sf_oz |>
+  select(state_name = NAME, geometry)
+```
+
+``` r
+## Step 1b declare reference data
+options(ggregions.ref.regions = australia_state_ref)
+```
+
+``` r
+## Step 2 plot with geom_region and frinew
+
+tribble(~state, ~pop,
+        "Victoria", 1,
+        "Queensland", 2,
+        "New South Wales", 3,
+        "Western Australia", 4,
+        "Northern Territory", 5,
+        "Tasmania", 6,
+        "South Australia", 7,
+        "Australian Capital Territory", 8,
+        "Other Territories", 9
+        ) |> 
+  ggplot() + 
+  aes(region = state, fill = pop) + 
+  geom_region() +
+  geom_region_border(keep = "Tasmania", color = "cadetblue2")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+``` r
+
+library(ggplot2)
+ggplot() + 
+  stamp_region() + 
+  stamp_region(keep = "Victoria", fill = "blue") + 
+  stamp_region_border(keep = "Western Australia", 
+                 color = "orange") + 
+  stamp_region_text(keep = "Queensland")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->
+
+## Interface \#2. use write\_\*() functions to specify reference data for layers.
+
+<details>
+
+``` r
+#' @export
+write_geom_region <- function(ref_data){
+
+  modified_fun <- geom_region
+
+  formals(modified_fun)$ref_data <- substitute(ref_data)
+
+  return(modified_fun)
+
+}
+
+
+
+#' @export
+write_stamp_region <- function(ref_data){
+
+  modified_function <- stamp_region
+
+formals(modified_function)$ref_data <- substitute(ref_data)
+# formals(modified_function)$data <- substitute(ref_data)
+
+
+return(modified_function)
+
+}
+
+
+#' @export
+write_geom_region_border <- function(ref_data){
+
+  modified_fun <- geom_region_border
+
+  formals(modified_fun)$ref_data <- substitute(ref_data)
+
+  return(modified_fun)
+
+}
+
+#' @export
+write_stamp_region_border <- function(ref_data){
+
+  modified_fun <- geom_stamp_border
+
+  formals(modified_fun)$ref_data <- substitute(ref_data)
+
+  return(modified_fun)
+
+}
+
+
+#' @export
+write_geom_region_text <- function(ref_data){
+
+  modified_function <- geom_region_text
+
+  formals(modified_function)$ref_data <- substitute(ref_data)
+
+return(modified_function)
+
+}
+
+
+#' @export
+write_stamp_region_text <- function(ref_data){
+
+  modified_function <- stamp_region_text
+
+  formals(modified_function)$ref_data <- substitute(ref_data)
+
+  return(modified_function)
+
+}
+
+
+#' @export
+write_geom_region_label <- function(ref_data){
+
+  modified_function <- geom_region_label
+
+  formals(modified_function)$ref_data <- substitute(ref_data)
+
+return(modified_function)
+
+}
+
+
+#' @export
+write_stamp_region_label <- function(ref_data){
+
+  modified_function <- stamp_region_label
+
+  formals(modified_function)$ref_data <- substitute(ref_data)
+
+  return(modified_function)
+
+}
+```
+
+</details>
+
+### North Carolina example
+
+``` r
+# Step 1.a prep ref data
 nc_ref <- nc |> 
   select(county_name = NAME, 
          county_fips = FIPS, 
          geometry)
 
-nc_ref |> options(ggregions.ref.regions = _)
+# Step 1.b
+geom_county <- ggregions::write_geom_region(ref_data = nc_ref)
+stamp_county <- ggregions::write_stamp_region(ref_data = nc_ref)
+
 
 tribble(~county, ~ind_going,
         "Ashe",           1,
@@ -340,76 +564,33 @@ tribble(~county, ~ind_going,
   ggplot() + 
   aes(region = county,
       fill = ind_going) + 
-  stamp_region() +
-  geom_region()
+  stamp_county() + 
+  geom_county()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
-
-## 2. Two-step workflow
-
-### i. Effortlessly write new geom\_\* region-specific functions
-
-The {ggregions} package (in proof-of-concept phase) will allow
-geographic data package writers to quickly create easy-to-use ggplot2
-layer extensions that adhere to the ggplot2 ‘grammar’.
-
-First, the authors will prepare a reference dataset that contains a
-[geometry](https://ggplot2.tidyverse.org/reference/ggsf.html#geometry-aesthetic),
-sfc-containing column as well as columns of allowed identifiers for the
-regions of interest. For example, the identifiers from in
-`us_states_ref` from `usmapdata::us_map()`, are `state_name`, `fips` and
-`state_abbr`.
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ``` r
-library(dplyr)
 
-# Step 1. prep some of their geo reference data
-us_states_ref <- usmapdata::us_map() |>
-  select( state_name = full, # state_name will positional aes like x or y 
-          state_abbr = abbr, 
-          fips,
-          geometry = geom,  # one column with geometry is required
-         )  # state_abbr will also be optional positional aes like x or y
 
-head(us_states_ref)
-#> Simple feature collection with 6 features and 3 fields
-#> Geometry type: MULTIPOLYGON
-#> Dimension:     XY
-#> Bounding box:  xmin: -2584074 ymin: -2602555 xmax: 1431301 ymax: -39590.54
-#> Projected CRS: NAD27 / US National Atlas Equal Area
-#>   state_name state_abbr fips                       geometry
-#> 1     Alaska         AK   02 MULTIPOLYGON (((-2390688 -2...
-#> 2    Alabama         AL   01 MULTIPOLYGON (((1091785 -13...
-#> 3   Arkansas         AR   05 MULTIPOLYGON (((482022.2 -9...
-#> 4    Arizona         AZ   04 MULTIPOLYGON (((-1386064 -1...
-#> 5 California         CA   06 MULTIPOLYGON (((-1716581 -1...
-#> 6   Colorado         CO   08 MULTIPOLYGON (((-787705.6 -...
+tribble(~county, ~ind_going,
+        "Ashe",           1,
+        "Northampton",    0
+        ) |> 
+  rename(region = county) |>
+  compute_panel_regions(ref_data = nc_ref)
+#>   county_name county_fips          id                       geometry
+#> 1        Ashe       37009        Ashe MULTIPOLYGON (((-81.47276 3...
+#> 2 Northampton       37131 Northampton MULTIPOLYGON (((-77.21767 3...
+#>      .id_type      region      xmin      xmax     ymin     ymax         x
+#> 1 county_name        Ashe -84.32385 -75.45698 33.88199 36.58965 -81.49496
+#> 2 county_name Northampton -84.32385 -75.45698 33.88199 36.58965 -77.36988
+#>          y ind_going
+#> 1 36.42112         1
+#> 2 36.35211         0
 ```
 
-Then, authors will be able use `write_geom_region()` to create a
-regions-specific ggplot2 layer, for example `geom_us_state()` below,
-which can be made available in their geo packages.
-
-``` r
-# Step 2. use `write_geom_region`
-library(ggregions)
-geom_us_state <- write_geom_region(ref_data = us_states_ref)
-```
-
-### ii. Deliver intuitive, newcomer-welcoming spatial viz experience
-
-By including the newly specified `geom_` function in their geo data
-package (perhaps instead or in addition to a convenience wrapper that
-are typical of geo packages) the package *users* will be able to use
-the`data + aes + geom` formulation for defining their plots. Instead of
-positional aesthetics like x, y or geometry, a region identifier like
-`state_name` or `fips` can be used. Internally, the regions `geom_*`
-will translate between place name or other identifier to the necessary
-borders (`sfc`s).
-
-Below is some tabular data with geographic region identifiers, but no
-boundaries:
+### US example
 
 ``` r
 us_income <- tidyr::us_rent_income |> 
@@ -428,422 +609,49 @@ head(us_income)
 #> 6 08    Colorado   income    32401   109
 ```
 
-Even though there is no boundary information, analysts can map this data
-with the familiar data + aesthetic mapping + layer syntax that makes
-ggplot2 easy to read, write, and reason about.
-
 ``` r
-library(ggplot2)
-library(usmapdata)
+# step 1.a prepare ref data 
+
+us_states_ref <- usmapdata::us_map() |>
+  select( 
+    state_abbr = abbr, # first variable will also be 'id' var
+    state_name = full, 
+    state_fips = fips,
+    geometry = geom,  # one column 'geometry' is required
+         )  
+
+# step 1b write locked-in ref_data
+geom_state        <- write_geom_region(ref_data = us_states_ref)
+geom_state_text   <- write_geom_region_text(ref_data = us_states_ref)
+geom_state_label  <- write_geom_region_label(ref_data = us_states_ref)
+geom_state_border <- write_geom_region_border(ref_data = us_states_ref)
+
+stamp_state        <- write_stamp_region(ref_data = us_states_ref)
+stamp_state_text   <- write_stamp_region_text(ref_data = us_states_ref)
+stamp_state_label  <- write_stamp_region_label(ref_data = us_states_ref)
+stamp_state_border <- write_stamp_region_border(ref_data = us_states_ref)
+#> Error in write_stamp_region_border(ref_data = us_states_ref): object 'geom_stamp_border' not found
+
+# step 2 plot
+head(us_income)
+#> # A tibble: 6 × 5
+#>   GEOID NAME       variable income   moe
+#>   <chr> <chr>      <chr>     <dbl> <dbl>
+#> 1 01    Alabama    income    24476   136
+#> 2 02    Alaska     income    32940   508
+#> 3 04    Arizona    income    27517   148
+#> 4 05    Arkansas   income    23789   165
+#> 5 06    California income    29454   109
+#> 6 08    Colorado   income    32401   109
 
 ggplot(data = us_income) + 
-  aes(state_name = NAME, 
+  aes(region = NAME, 
       fill = income) + 
-  geom_us_state()
-```
-
-![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
-
-Packages that might take avantage of ggregion’s functionality include
-[afrimapr](https://afrimapr.github.io/afrimapr.website/),
-[geobr](https://ipeagit.github.io/geobr/),
-[cancensus](https://mountainmath.github.io/cancensus/index.html),
-[chilemapas](https://pacha.dev/chilemapas/),
-[RCzechia](https://github.com/jlacko/RCzechia),
-[geofi](https://ropengov.github.io/geofi/) ,
-[geokz](https://github.com/arodionoff/geokz),
-[mapsPERU](https://github.com/musajajorge/mapsPERU) and
-[geoidep](https://geografo.pe/geoidep/index.html),
-[mapSpain](https://github.com/rOpenSpain/mapSpain/),
-[geographr](https://github.com/britishredcrosssociety/geographr),
-[geouy](https://github.com/RichDeto/geouy),
-[tigris](https://github.com/walkerke/tigris), and
-[rgeoboundaries](https://github.com/wmgeolab/rgeoboundaries). Since
-these geo packages have many users, the impacts of `{ggregions}` could
-be significant.
-
-# Status quo and implementation demonstrations, ideas
-
-## Status Quo: Inconsistent APIs or leave the data manipulation to the user.
-
-``` r
-library(tidyverse)
-library(ozmaps)
-sf_oz <- ozmap("states")
-
-
-# some data that we want to viz
-au_states <- tribble(~state, ~pop,
-        "Victoria", 1,
-        "Queensland", 2,
-        "New South Wales", 3,
-        "Western Australia", 4,
-        "Northern Territory", 5,
-        "Tasmania", 6,
-        "South Australia", 7,
-        "Australian Capital Territory", 8,
-        "Other Territories", 9
-        )
-
-sf_oz |> names()
-#> [1] "NAME"     "geometry"
-
-sf_oz |>
-  full_join(au_states, by = join_by(NAME == state )) |> 
-  ggplot() + 
-  aes(geometry = geometry, fill = pop) + 
-  geom_sf()
-```
-
-# Alternative: Toward region-specific layer-writing
-
-## Step 1. Define compute
-
-We’ll look at the Australian states case as we go, but the ref_data
-argument will keep thing generic.
-
-``` r
-australia_state_ref <- sf_oz |>
-  select(state_name = NAME)
-```
-
-``` r
-compute_panel_regions <- function(data, scales, ref_data, keep = NULL, drop = NULL, stamp = F){
-
-  ref_data$id <- ref_data[1][[1]]
-
-  if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
-  if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
-
-  ref_data <- ref_data |> 
-     ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |> # add bounding boxes xmin xmax etc
-     ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf) # add x and y centers
-
-  if(!stamp){ ref_data |> dplyr::inner_join(data) } else {ref_data}
-
-}
-```
-
-### Test Compute
-
-``` r
-au_states |> 
-  rename(state_name = state) |>
-  compute_panel_regions(ref_data = australia_state_ref)
-#> Simple feature collection with 9 features and 9 fields
-#> Geometry type: MULTIPOLYGON
-#> Dimension:     XY
-#> Bounding box:  xmin: 105.5507 ymin: -43.63203 xmax: 167.9969 ymax: -9.229287
-#> Geodetic CRS:  GDA94
-#> # A tibble: 9 × 10
-#>   state_name                  geometry id     xmin  xmax  ymin  ymax     x     y
-#>   <chr>             <MULTIPOLYGON [°]> <chr> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
-#> 1 New South… (((150.7016 -35.12286, 1… New …  106.  168. -43.6 -9.23  146. -32.8
-#> 2 Victoria   (((146.6196 -38.70196, 1… Vict…  106.  168. -43.6 -9.23  145. -36.6
-#> 3 Queensland (((148.8473 -20.3457, 14… Quee…  106.  168. -43.6 -9.23  143. -19.9
-#> 4 South Aus… (((137.3481 -34.48242, 1… Sout…  106.  168. -43.6 -9.23  137. -32.0
-#> 5 Western A… (((126.3868 -14.01168, 1… West…  106.  168. -43.6 -9.23  121. -24.4
-#> 6 Tasmania   (((147.8397 -40.29844, 1… Tasm…  106.  168. -43.6 -9.23  147. -42.2
-#> 7 Northern … (((136.3669 -13.84237, 1… Nort…  106.  168. -43.6 -9.23  133. -18.4
-#> 8 Australia… (((149.2317 -35.222, 149… Aust…  106.  168. -43.6 -9.23  149. -35.5
-#> 9 Other Ter… (((167.9333 -29.05421, 1… Othe…  106.  168. -43.6 -9.23  151. -35.2
-#> # ℹ 1 more variable: pop <dbl>
-```
-
-To do/consider
-
-- [ ] warnings about not plot data that fails to find a match in ref
-  data
-- [ ] allowing multiple geo reference data sets with different
-  resolutions?
-- [ ] more flexibility on specifying the id column (now it is the first
-  column in the dataset)
-- [ ] other?
-
-## Step 2. Define Stat
-
-``` r
-# compute just reproduced verbatim from above for packaging purposes
-#' Compute panel regions
-#'
-#' @description
-#' A short description...
-#'
-#' @param data A data frame.
-#' @param scales Scales.
-#' @param ref_data A reference data frame.
-#' @param keep A character vector of IDs to keep. Optional.
-#' @param drop A character vector of IDs to drop. Optional.
-#' @param stamp A single logical value. Optional.
-#'
-#' @returns
-#' A data frame. If `stamp` is `FALSE`, the processed `ref_data` inner-joined with `data`.
-#' Otherwise, the processed `ref_data`.
-#'
-#' @export
-compute_panel_regions0 <- function(data, scales, ref_data, keep = NULL, 
-                                  drop = NULL, stamp = F){
-
-  ref_data$id <- ref_data[1][[1]]
-
-  if(!is.null(keep)){ref_data <- ref_data |> dplyr::filter(id %in% keep)}
-  if(!is.null(drop)){ref_data <- ref_data |> dplyr::filter(!(id %in% drop))}
-
-  ref_data <- ref_data |> 
-    ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
-    ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
-
-  if(!stamp){ ref_data |> dplyr::inner_join(data) } else { ref_data }
-
-}
-
-
-StatRegion0 <- ggplot2::ggproto("StatRegion0",
-                      ggplot2::Stat,
-                      compute_panel = compute_panel_regions0,
-                      default_aes = 
-                        ggplot2::aes(label = ggplot2::after_stat(id)))
-```
-
-### To do/consider
-
-- [ ] Stat won’t warn about required_aes, since none are declared. We
-  anticipate allowed aes to be quite varied. How otherwise can this be
-  addressed?
-- [ ] Think through, experiment if compute_group might also work, and if
-  it is preferable
-
-### Test Stat
-
-``` r
-ggplot(au_states) +
-  aes(state_name = state) +
-  geom_sf(stat = StatRegion0, ref_data = australia_state_ref) + 
-  geom_text(stat = StatRegion0, ref_data = australia_state_ref) +
-  aes(fill = pop)
+  geom_state() + 
+  geom_state_border(keep = "North Carolina")
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
-
-### Test Stat X GeomSF w/ `make_constructor()`
-
-We can define user facing function with `make_constructor`. However, for
-greater usability coord_sf(), is included in the user-facing geom_sf()
-function, and we will want to do this too.
-
-``` r
-geom_au_state_no_coords <- 
-  make_constructor(GeomSf, 
-                   stat = StatRegion0, 
-                   ref_data = australia_state_ref)
-
-geom_au_state_text_no_coords <- 
-  make_constructor(GeomText, 
-                   stat = StatRegion0, 
-                   ref_data = australia_state_ref)
-
-crs_au_states <- sf::st_crs(sf_oz)
-
-ggplot(au_states) +
-  aes(state_name = state) + 
-  geom_au_state_no_coords() + 
-  geom_au_state_text_no_coords(check_overlap = T) + 
-  aes(fill = pop) +
-  coord_sf(crs = crs_au_states)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
-
-``` r
-# Note, in fact, errors w/o coord_sf, and we want to choose the right crs
-ggplot(au_states) +
-   aes(state_name = state) + 
-   geom_au_state_no_coords() 
-#> Error in `geom_au_state_no_coords()`:
-#> ! Problem while converting geom to grob.
-#> ℹ Error occurred in the 1st layer.
-#> Caused by error in `draw_panel()`:
-#> ! `geom_sf()` can only be used with `coord_sf()`.
-```
-
-## Step 3. Create `write_geom_region()` and friends and test
-
-<details Arrow to see details>
-
-``` r
-# when the crs is NULL, st_crs unfortunately returns, na, but we would like it to return NULL
-geom_region0 <- function (mapping = aes(), data = NULL, stat = StatRegion0, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
-{
-    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
-        stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, 
-            ...)), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-
-#' @export
-write_geom_region <- function(ref_data, required_aes = NULL){
-
-  modified_fun <- geom_region0
-
-  formals(modified_fun)$ref_data <- substitute(ref_data)
-
-  return(modified_fun)
-
-}
-
-
-# all the arguments should be passed
-stamp_region0 <- function (mapping = aes(), data = ref_data, stat = StatRegion0, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
-{
-    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
-        stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = T,
-            ...)), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-
-
-#' @export
-write_stamp_region <- function(ref_data, required_aes = NULL){
-
-  modified_function <- stamp_region0
-
-formals(modified_function)$ref_data <- substitute(ref_data)
-
-return(modified_function)
-
-}
-
-
-# all the arguments should be passed
-geom_region_text0 <- function (mapping = aes(), data = NULL, stat = StatRegion0,
-                              position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
-{
-    c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
-        stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, 
-            ...)), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-
-
-#' @export
-write_geom_region_text <- function(ref_data, required_aes = NULL){
-
-  modified_function <- geom_region_text0
-
-  formals(modified_function)$ref_data <- substitute(ref_data)
-
-return(modified_function)
-
-}
-
-
-
-# all the arguments should be passed
-# all the arguments should be passed
-stamp_region_text0 <- function (mapping = aes(), data = ref_data, stat = StatRegion0,
-                              position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
-{
-    c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
-        stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = T,
-            ...)), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-
-#' @export
-write_stamp_region_text <- function(ref_data, required_aes = NULL){
-
-  modified_function <- stamp_region_text0
-
-  formals(modified_function)$ref_data <- substitute(ref_data)
-
-  return(modified_function)
-
-}
-```
-
-</details>
-
-## Australia example w/ `write_geom_region()`
-
-``` r
-sf_oz <- ozmap("states")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
-
-``` r
-
-australia_state_ref <- sf_oz |>
-  select(state_name = NAME)
-
-geom_au_state <- write_geom_region(ref_data = australia_state_ref)
-stamp_au_state <- write_stamp_region(ref_data = australia_state_ref)
-geom_au_state_text <- write_geom_region_text(ref_data = australia_state_ref)
-stamp_au_states_text <- write_stamp_region_text(ref_data = australia_state_ref)
-
-au_states |> 
-  ggplot() + 
-  aes(state_name = state, fill = pop) + 
-  stamp_au_state() +
-  geom_au_state(drop = c("Western Australia", "Victoria")) + #aes(fill = NULL)
-  geom_au_state(keep = "Tasmania", fill = "cadetblue2") + 
-  stamp_au_states_text(keep = "Tasmania")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->
-
-``` r
-
-library(ggplot2)
-ggplot() + 
-  stamp_au_state() + 
-  stamp_au_state(keep = "Victoria", fill = "blue") + 
-  stamp_au_state(keep = "Western Australia", 
-                 fill = NA,
-                 color = "orange",
-                 linewidth = 2)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-16-3.png)<!-- -->
-
-## US state example w/ `write_geom_region()`
-
-``` r
-us_states_ref <- usmapdata::us_map() |>
-  rename(geometry = geom,
-         state_name = full,
-         state_abbr = abbr) |>
-  select(state_name, everything())
-  
-geom_us_state <- write_geom_region(us_states_ref)
-stamp_us_state <- write_stamp_region(us_states_ref)
-geom_us_state_text <- write_geom_region_text(us_states_ref)
-stamp_us_states_text <- write_stamp_region_text(us_states_ref)
-
-
-us_rent_income |> 
-  filter(variable == "income") |>
-  ggplot() + 
-  aes(state_name = NAME, fill = estimate) + 
-  geom_us_state() + 
-  scale_fill_viridis_c(option = "magma") + 
-  stamp_us_states_text(color = "white",
-                       aes(label = after_stat(state_abbr)))
-```
-
-![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 # Minimal Packaging
 
@@ -877,108 +685,8 @@ devtools::check(".")
 devtools::install(pkg = ".", upgrade = "never")
 ```
 
-## Just for fun, so code showing some exploratory work done with `make_constructor`
-
-<details>
+# Previous, recent implementation and experiments, see [source](https://github.com/EvaMaeRey/ggregions/blob/main/README.Rmd)
 
 ``` r
-GeomSfStamp <- ggplot2::ggproto("GeomSfStamp", ggplot2::GeomSf,
-                       default_aes = modifyList(ggplot2::GeomSf$default_aes, 
-                                                ggplot2::aes(fill = ggplot2::from_theme(scales::col_mix(ink, paper, 0.8))), 
-                                                keep.null = T))
-
-geom_region00 <- ggplot2::make_constructor(ggplot2::GeomSf, stat = StatRegion0) 
-stamp_region00 <- ggplot2::make_constructor(GeomSfStamp, stat = StatRegion0, stamp = T, inherit.aes = F)
-geom_region_text00 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion0)
-stamp_region_text00 <- ggplot2::make_constructor(ggplot2::GeomText, stat = StatRegion0, stamp = T, inherit.aes = F)
+knitr::knit_exit()
 ```
-
-## Step 3.b Make geom_region (and friends) that brings along coords_sf() (currently not fully argumented)
-
-``` r
-# all the arguments *should* be passed, but this for the sake of demo
-geom_regionX <- function(..., ref_data){
-  c(geom_region00(..., ref_data = ref_data), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-# all the arguments *should* be passed, but this for the sake of demo
-stamp_regionX <- function(..., ref_data){
-  c(stamp_region00(..., ref_data = ref_data), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-geom_region_textX <- function(..., ref_data){
-  c(geom_region_text00(..., ref_data = ref_data), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-stamp_region_textX <- function(..., ref_data){
-  c(stamp_region_text00(..., ref_data = ref_data), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-```
-
-## Step 4. demo region-specific user-facing functions… just for demonstration purposes!
-
-Not argumented. We’ll return to this later.
-
-``` r
-# all arguments above that should be passed, could be passed, or, 
-geom_au_states <- function(...){geom_regionX(..., ref_data = australia_state_ref)}
-stamp_au_states <- function(...){stamp_regionX(..., ref_data = australia_state_ref)}
-geom_au_states_text <- function(...){geom_region_textX(..., ref_data = australia_state_ref)}
-stamp_au_states_text <- function(...){stamp_region_textX(..., ref_data = australia_state_ref)}
-```
-
-### Test
-
-``` r
-au_states |> 
-  sample_n(5) |> 
-  ggplot() +
-  aes(state_name = state) + 
-  stamp_au_states() +
-  geom_au_states()
-```
-
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
-
-``` r
-
-au_states |>
-ggplot() +
-  aes(state_name = state, fill = pop) + 
-  geom_au_states(color = "white") +
-  stamp_au_states(keep = "Tasmania", 
-                  fill = "cadetblue1"
-                  ) +
-  stamp_au_states(keep = "Queensland") + 
-  geom_au_states_text(color = "red",
-                      check_overlap = T)  
-```
-
-![](README_files/figure-gfm/unnamed-chunk-23-2.png)<!-- -->
-
-``` r
-
-
-last_plot() + 
-  geom_au_states(fill = "cadetblue1")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-23-3.png)<!-- -->
-
-``` r
-
-au_states |>
-  ggplot() +
-  aes(state_name = state) + 
-  geom_au_states(aes(fill = pop)) + 
-  stamp_au_states(color = "red", keep = "Western Australia",
-                  fill = NA, linewidth = 3)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-23-4.png)<!-- -->
-
-</details>

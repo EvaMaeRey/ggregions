@@ -21,16 +21,20 @@ compute_panel_regions <- function (data, scales, ref_data, keep = NULL, drop = N
     
     if (!stamp) {
     
-          ref_data_long <- ref_data |> pivot_longer(cols = -c(geometry, id), names_to = ".id_type", values_to = "region")
+          ref_data_long <- ref_data |> 
+            mutate(across(-geometry, as.character)) |>
+            pivot_longer(cols = -c(geometry, id), 
+                         names_to = ".id_type", 
+                         values_to = "region")
 
-          # check unique
+          # check unique in the future
           length(ref_data_long$region) == length(unique(ref_data_long$region))
     
-          ref_data_long <- ggplot2::StatSfCoordinates$compute_group(
-      
-          ggplot2::StatSf$compute_panel(ref_data_long, coord = ggplot2::CoordSf), coord = ggplot2::CoordSf)
+          ref_data_long <- ref_data_long |> 
+            ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
+            ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
         
-          out <- dplyr::inner_join(ref_data_long, data, by = join_by(region)) #|> 
+          out <- dplyr::inner_join(ref_data_long, data, by = join_by(region)) 
           
           ref_data |> sf::st_drop_geometry() |>
             inner_join(out, by = join_by(id))
@@ -39,7 +43,9 @@ compute_panel_regions <- function (data, scales, ref_data, keep = NULL, drop = N
     
     else {
       
-        ref_data |> mutate(region = 1)
+        ref_data |> 
+            ggplot2::StatSf$compute_panel(coord = ggplot2::CoordSf) |>
+            ggplot2::StatSfCoordinates$compute_group(coord = ggplot2::CoordSf)
       
     }
     
@@ -48,10 +54,18 @@ compute_panel_regions <- function (data, scales, ref_data, keep = NULL, drop = N
 
 StatRegion <- ggplot2::ggproto("StatRegion", ggplot2::Stat,
                       compute_panel = compute_panel_regions,
-                      default_aes = ggplot2::aes(label = ggplot2::after_stat(region)))
+                      required_aes = "region",
+                      default_aes = ggplot2::aes(label = ggplot2::after_stat(id),
+                                                 geometry = geometry))
+
+StatRegionStamp <- ggplot2::ggproto("StatRegionStamp", ggplot2::Stat,
+                      compute_panel = compute_panel_regions,
+                      default_aes = ggplot2::aes(label = ggplot2::after_stat(id),
+                                                 geometry = geometry))
 
 #' @export
-geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion,
+geom_region <- function (mapping = aes(), data = NULL, 
+                         stat = StatRegion,
                          position = "identity", 
                          na.rm = FALSE, show.legend = NA, 
                          inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...){
@@ -64,12 +78,15 @@ geom_region <- function (mapping = aes(), data = NULL, stat = StatRegion,
 
 
 #' @export
-stamp_region <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+stamp_region <- function (mapping = aes(), stat = StatRegionStamp, 
+                          position = "identity", 
+                          na.rm = FALSE, show.legend = NA, 
+                          inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
 {
-    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
+    c(layer_sf(geom = GeomSf, data = ref_data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = stamp,
+        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, 
+                                                         ref_data = ref_data, stamp = T,
             ...)), coord_sf(crs = st_crs_mod(ref_data))
       )
 }
@@ -95,8 +112,8 @@ geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion,
 
 
 #' @export
-stamp_region_border <- function (mapping = aes(), data = NULL, 
-                          stat = StatRegion, position = "identity", 
+stamp_region_border <- function (mapping = aes(), data = ref_data, 
+                          stat = StatRegionStamp, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomSfBorder, data = data, mapping = mapping, 
@@ -119,8 +136,8 @@ geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, p
 
 
 #' @export
-stamp_region_text <- function (mapping = aes(), data = NULL, 
-                          stat = StatRegion, position = "identity", 
+stamp_region_text <- function (mapping = aes(), data = ref_data, 
+                          stat = StatRegionStamp, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
@@ -142,8 +159,8 @@ geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, 
 }
 
 #' @export
-stamp_region_label <- function (mapping = aes(), data = NULL, 
-                          stat = StatRegion, position = "identity", 
+stamp_region_label <- function (mapping = aes(), data = ref_data, 
+                          stat = StatRegionStamp, position = "identity", 
     na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 

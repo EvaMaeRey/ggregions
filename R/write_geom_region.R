@@ -1,19 +1,7 @@
-# when the crs is NULL, st_crs unfortunately returns, na, but we would like it to return NULL
-geom_region0 <- function (mapping = aes(), data = NULL, stat = StatRegion0, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
-{
-    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
-        stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, 
-            ...)), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-
 #' @export
-write_geom_region <- function(ref_data, required_aes = NULL){
+write_geom_region <- function(ref_data){
 
-  modified_fun <- geom_region0
+  modified_fun <- geom_region
 
   formals(modified_fun)$ref_data <- substitute(ref_data)
 
@@ -22,49 +10,48 @@ write_geom_region <- function(ref_data, required_aes = NULL){
 }
 
 
-# all the arguments should be passed
-stamp_region0 <- function (mapping = aes(), data = ref_data, stat = StatRegion0, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
-{
-    c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
-        stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = T,
-            ...)), 
-    coord_sf(crs = st_crs_mod(ref_data)))
-}
-
-
 
 #' @export
-write_stamp_region <- function(ref_data, required_aes = NULL){
+write_stamp_region <- function(ref_data){
 
-  modified_function <- stamp_region0
+  modified_function <- stamp_region
 
 formals(modified_function)$ref_data <- substitute(ref_data)
+# formals(modified_function)$data <- substitute(ref_data)
+
 
 return(modified_function)
 
 }
 
 
-# all the arguments should be passed
-geom_region_text0 <- function (mapping = aes(), data = NULL, stat = StatRegion0,
-                              position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data, ...) 
-{
-    c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
-        stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, 
-            ...)), 
-    coord_sf(crs = st_crs_mod(ref_data)))
+#' @export
+write_geom_region_border <- function(ref_data){
+
+  modified_fun <- geom_region_border
+
+  formals(modified_fun)$ref_data <- substitute(ref_data)
+
+  return(modified_fun)
+
+}
+
+#' @export
+write_stamp_region_border <- function(ref_data){
+
+  modified_fun <- geom_stamp_border
+
+  formals(modified_fun)$ref_data <- substitute(ref_data)
+
+  return(modified_fun)
+
 }
 
 
-
 #' @export
-write_geom_region_text <- function(ref_data, required_aes = NULL){
+write_geom_region_text <- function(ref_data){
 
-  modified_function <- geom_region_text0
+  modified_function <- geom_region_text
 
   formals(modified_function)$ref_data <- substitute(ref_data)
 
@@ -73,25 +60,34 @@ return(modified_function)
 }
 
 
+#' @export
+write_stamp_region_text <- function(ref_data){
 
-# all the arguments should be passed
-# all the arguments should be passed
-stamp_region_text0 <- function (mapping = aes(), data = ref_data, stat = StatRegion0,
-                              position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data, ...) 
-{
-    c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
-        stat = stat, position = position, show.legend = show.legend, 
-        inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data, stamp = T,
-            ...)), 
-    coord_sf(crs = st_crs_mod(ref_data)))
+  modified_function <- stamp_region_text
+
+  formals(modified_function)$ref_data <- substitute(ref_data)
+
+  return(modified_function)
+
 }
 
 
 #' @export
-write_stamp_region_text <- function(ref_data, required_aes = NULL){
+write_geom_region_label <- function(ref_data){
 
-  modified_function <- stamp_region_text0
+  modified_function <- geom_region_label
+
+  formals(modified_function)$ref_data <- substitute(ref_data)
+
+return(modified_function)
+
+}
+
+
+#' @export
+write_stamp_region_label <- function(ref_data){
+
+  modified_function <- stamp_region_label
 
   formals(modified_function)$ref_data <- substitute(ref_data)
 
