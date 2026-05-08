@@ -36,6 +36,9 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 R Medicine Talk
 [slides](https://evamaerey.github.io/mytidytuesday/2026-04-03-r-medicine-ggregions/r-medicine-ggregions.html#1)
 
+COWY-ASA Talk 2026-05-08
+[slides](https://evamaerey.github.io/mytidytuesday/2026-04-03-r-medicine-ggregions/asa-cowy-ggregions.html#1)
+
 Note: foundation work for this package has been conducted in many
 experiments
 ([1](https://evamaerey.github.io/mytidytuesday/2025-09-15-make_constructor_sf/make_constructor_sf.html),
@@ -155,6 +158,19 @@ library(tidyverse)
 ```
 
 <details>
+
+``` r
+# this should probably be changed...
+ref_data_us <- usmapdata::us_map() |>
+  dplyr::select( 
+    state_abbr = abbr, # first variable will also be 'id' var
+    state_name = full, 
+    state_fips = fips,
+    geometry = geom,  # one column 'geometry' is required
+         )  
+
+usethis::use_data(ref_data_us, overwrite = T)
+```
 
 ``` r
 st_crs_mod <- function(ref_data){
@@ -377,7 +393,7 @@ tribble(~county, ~ind_going,
   stamp_region()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ``` r
 
@@ -385,7 +401,7 @@ last_plot() +
   geom_region()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
 
 ### Australia example
 
@@ -423,7 +439,7 @@ tribble(~state, ~pop,
   geom_region_border(keep = "Tasmania", color = "cadetblue2")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ``` r
 
@@ -436,7 +452,7 @@ ggplot() +
   stamp_region_text(keep = "Queensland")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
 
 ## Interface \#2. use write\_\*() functions to specify reference data for layers.
 
@@ -568,7 +584,7 @@ tribble(~county, ~ind_going,
   geom_county()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` r
 
@@ -651,7 +667,7 @@ ggplot(data = us_income) +
   geom_state_border(keep = "North Carolina")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 # Minimal Packaging
 
