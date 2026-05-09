@@ -11,6 +11,7 @@
     `options()`.](#interface-1-standard-interface-for-visualizing-regions-and-locales-aesregion--my_var--geom_region-where-scope-of-interest-is-declared-via-options)
     - [North Carolina example](#north-carolina-example)
     - [Australia example](#australia-example)
+    - [teethr example](#teethr-example)
   - [Interface \#2. use write\_\*() functions to specify reference data
     for
     layers.](#interface-2-use-write_-functions-to-specify-reference-data-for-layers)
@@ -454,6 +455,65 @@ ggplot() +
 
 ![](README_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
 
+### teethr example
+
+``` r
+# Step 1a Prep Reference Data
+teethr::dental_arcade_mapping |> as_tibble() |>
+  left_join(teethr::tooth_notation |> dplyr::rename(tooth = text)) |>
+  dplyr::select(tooth_id = tooth, fdi = FDI, standard = standards, geometry) ->
+teeth_ref_data
+
+head(teethr::dental_arcade_mapping)
+#> Simple feature collection with 6 features and 1 field
+#> Geometry type: POLYGON
+#> Dimension:     XY
+#> Bounding box:  xmin: 64.44807 ymin: 270.5784 xmax: 132.2833 ymax: 388.2091
+#> CRS:           NA
+#> # A tibble: 6 × 2
+#>   tooth                                                                 geometry
+#>   <chr>                                                                <POLYGON>
+#> 1 URM2  ((65.18537 293.3849, 65.71057 295.1088, 66.38935 296.4965, 67.34528 297…
+#> 2 URM1  ((74.4591 325.7847, 75.55431 326.5688, 76.88258 327.0586, 78.77511 327.…
+#> 3 URP2  ((76.59484 342.573, 77.43558 343.7596, 78.59217 344.6295, 80.03965 345.…
+#> 4 URP1  ((86.86233 359.6018, 86.86725 360.529, 87.02025 360.8659, 87.43738 361.…
+#> 5 URC1  ((101.1985 370.3966, 101.3456 371.2152, 101.6861 371.9995, 102.782 373.…
+#> 6 URI2  ((123.4955 387.3634, 123.4955 387.3634, 124.5163 387.7796, 125.556 388.…
+
+# Step 1b 
+options(ggregions.ref.regions = teeth_ref_data)
+
+
+# Step 2 Plotting 
+```
+
+``` r
+library(teethr)
+
+caries_ratios <- mb11_caries %>% 
+  dental_longer(-id) %>%
+  dental_join() %>% 
+  count_caries(caries = score, no_lesion = "none") %>% # convert location to lesion count
+  group_by(tooth) %>% 
+  dental_ratio(count = caries_count) %>%
+  dental_recode(tooth, "FDI", "text") 
+```
+
+``` r
+caries_ratios |> 
+  ggplot() + 
+  aes(region = tooth, 
+      fill = ratio) + 
+  geom_region(alpha = .5) + 
+  geom_region_text(size = 2) + 
+  scale_fill_viridis_c()
+#> Error in `geom_region()`:
+#> ! Problem while setting up geom.
+#> ℹ Error occurred in the 1st layer.
+#> Caused by error in `compute_geom_1()`:
+#> ! `geom_sf()` requires the following missing aesthetics: geometry.
+```
+
 ## Interface \#2. use write\_\*() functions to specify reference data for layers.
 
 <details>
@@ -500,7 +560,7 @@ write_geom_region_border <- function(ref_data){
 #' @export
 write_stamp_region_border <- function(ref_data){
 
-  modified_fun <- geom_stamp_border
+  modified_fun <- stamp_region_border
 
   formals(modified_fun)$ref_data <- substitute(ref_data)
 
@@ -584,7 +644,7 @@ tribble(~county, ~ind_going,
   geom_county()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 ``` r
 
@@ -646,7 +706,6 @@ stamp_state        <- write_stamp_region(ref_data = us_states_ref)
 stamp_state_text   <- write_stamp_region_text(ref_data = us_states_ref)
 stamp_state_label  <- write_stamp_region_label(ref_data = us_states_ref)
 stamp_state_border <- write_stamp_region_border(ref_data = us_states_ref)
-#> Error in write_stamp_region_border(ref_data = us_states_ref): object 'geom_stamp_border' not found
 
 # step 2 plot
 head(us_income)
@@ -667,7 +726,7 @@ ggplot(data = us_income) +
   geom_state_border(keep = "North Carolina")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 # Minimal Packaging
 

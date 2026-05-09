@@ -405,6 +405,51 @@ ggplot() +
 
 
 
+### teethr example
+
+```{r}
+# Step 1a Prep Reference Data
+teethr::dental_arcade_mapping |> as_tibble() |>
+  left_join(teethr::tooth_notation |> dplyr::rename(tooth = text)) |>
+  dplyr::select(tooth_id = tooth, fdi = FDI, standard = standards, geometry) ->
+teeth_ref_data
+
+head(teethr::dental_arcade_mapping)
+
+# Step 1b 
+options(ggregions.ref.regions = teeth_ref_data)
+
+
+# Step 2 Plotting 
+```
+
+
+```{r, echo = T}
+library(teethr)
+
+caries_ratios <- mb11_caries %>% 
+  dental_longer(-id) %>%
+  dental_join() %>% 
+  count_caries(caries = score, no_lesion = "none") %>% # convert location to lesion count
+  group_by(tooth) %>% 
+  dental_ratio(count = caries_count) %>%
+  dental_recode(tooth, "FDI", "text") 
+
+```
+
+
+
+```{r arcade}
+caries_ratios |> 
+  ggplot() + 
+  aes(region = tooth, 
+      fill = ratio) + 
+  geom_region(alpha = .5) + 
+  geom_region_text(size = 2) + 
+  scale_fill_viridis_c()
+```
+
+
 ## Interface #2.  use write_*() functions to specify reference data for layers.
 
 <details>
@@ -451,7 +496,7 @@ write_geom_region_border <- function(ref_data){
 #' @export
 write_stamp_region_border <- function(ref_data){
 
-  modified_fun <- geom_stamp_border
+  modified_fun <- stamp_region_border
 
   formals(modified_fun)$ref_data <- substitute(ref_data)
 

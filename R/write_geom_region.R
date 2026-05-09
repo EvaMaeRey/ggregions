@@ -39,7 +39,7 @@ write_geom_region_border <- function(ref_data){
 #' @export
 write_stamp_region_border <- function(ref_data){
 
-  modified_fun <- geom_stamp_border
+  modified_fun <- stamp_region_border
 
   formals(modified_fun)$ref_data <- substitute(ref_data)
 
