@@ -14,13 +14,15 @@
     - [Australia example (ozmaps)](#australia-example-ozmaps)
     - [Brazil example (geobr)](#brazil-example-geobr)
     - [Brain regions example (ggseg)](#brain-regions-example-ggseg)
+    - [US states example (usmapdata)](#us-states-example-usmapdata)
     - [Dental example (teethr)](#dental-example-teethr)
     - [Countries example
       (rnaturalearth)](#countries-example-rnaturalearth)
     - [US counties example (usmapdata)](#us-counties-example-usmapdata)
     - [Texas counties (tigris)](#texas-counties-tigris)
-    - [Anatomy example (features from polygons to sf routine)
-      (gganatogram)](#anatomy-example-features-from-polygons-to-sf-routine-gganatogram)
+    - [Human anatomy example (features from polygons to sf routine)
+      (gganatogram)](#human-anatomy-example-features-from-polygons-to-sf-routine-gganatogram)
+- [Mouse anatomy example](#mouse-anatomy-example)
   - [Interface \#2. use write\_\*() functions to specify reference data
     for
     layers.](#interface-2-use-write_-functions-to-specify-reference-data-for-layers)
@@ -509,6 +511,30 @@ tribble(~region, ~info,
 
 ![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
+### US states example (usmapdata)
+
+``` r
+us_states_ref <- usmapdata::us_map() |>
+  select( 
+    state_name = full, # first variable will also be 'id' var, keep and drop
+    state_abbr = abbr, 
+    state_fips = fips,
+    geometry = geom,  # one column 'geometry' is required
+         )  
+
+options(ggregions.regions = us_states_ref)
+
+tribble(~state, ~info,
+        "Texas", TRUE,
+        "NC",    FALSE) |>
+  ggplot() + 
+  aes(region = state,
+      fill = info) + 
+  geom_region()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
 ### Dental example (teethr)
 
 ``` r
@@ -532,7 +558,7 @@ tribble(~tooth, ~info,
   geom_region(aes(fill = info))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ``` r
 library(tidyverse)
@@ -596,7 +622,7 @@ tribble(~country, ~info,
   aes(fill = info)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 ### US counties example (usmapdata)
 
@@ -621,7 +647,7 @@ tribble(~fips, ~info,
   geom_region() 
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 ### Texas counties (tigris)
 
@@ -654,9 +680,9 @@ tribble(~county, ~info,
   stamp_region_border(keep = "Harris", color = "red")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
-### Anatomy example (features from polygons to sf routine) (gganatogram)
+### Human anatomy example (features from polygons to sf routine) (gganatogram)
 
 ``` r
 to_sf_routine <- function(data){
@@ -703,7 +729,9 @@ ggplot() +
   geom_region_text() 
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+
+# Mouse anatomy example
 
 ``` r
 # Step 1 Prepare reference data
@@ -731,7 +759,7 @@ ggplot() +
   aes(fill = I(color))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 ## Interface \#2. use write\_\*() functions to specify reference data for layers.
 
@@ -864,7 +892,7 @@ tribble(~county, ~ind_going,
   geom_county()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 ``` r
 
@@ -946,7 +974,7 @@ ggplot(data = us_income) +
   geom_state_border(keep = "North Carolina")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
 
 # Minimal Packaging
 

@@ -454,6 +454,30 @@ tribble(~region, ~info,
 ```
 
 
+### US states example (usmapdata)
+
+
+```{r}
+us_states_ref <- usmapdata::us_map() |>
+  select( 
+    state_name = full, # first variable will also be 'id' var, keep and drop
+    state_abbr = abbr, 
+    state_fips = fips,
+    geometry = geom,  # one column 'geometry' is required
+         )  
+
+options(ggregions.regions = us_states_ref)
+
+tribble(~state, ~info,
+        "Texas", TRUE,
+        "NC",    FALSE) |>
+  ggplot() + 
+  aes(region = state,
+      fill = info) + 
+  geom_region()
+```
+
+
 
 ### Dental example (teethr)
 
@@ -592,7 +616,7 @@ tribble(~county, ~info,
 ```
 
 
-### Anatomy example (features from polygons to sf routine) (gganatogram)
+### Human anatomy example (features from polygons to sf routine) (gganatogram)
 
 ```{r}
 to_sf_routine <- function(data){
@@ -641,6 +665,8 @@ ggplot() +
 
 ```
 
+
+# Mouse anatomy example
 
 ```{r}
 # Step 1 Prepare reference data
