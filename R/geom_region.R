@@ -68,7 +68,7 @@ geom_region <- function (mapping = aes(), data = NULL,
                          stat = StatRegion,
                          position = "identity", 
                          na.rm = FALSE, show.legend = NA, 
-                         inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...){
+                         inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...){
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
         inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data,
@@ -81,7 +81,7 @@ geom_region <- function (mapping = aes(), data = NULL,
 stamp_region <- function (mapping = aes(), stat = StatRegionStamp, 
                           position = "identity", 
                           na.rm = FALSE, show.legend = NA, 
-                          inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+                          inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomSf, data = ref_data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -101,7 +101,7 @@ GeomSfBorder <- ggplot2::ggproto("GeomSfBorder", ggplot2::GeomSf,
 
 #' @export
 geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom =  GeomSfBorder, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -114,7 +114,7 @@ geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion,
 #' @export
 stamp_region_border <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomSfBorder, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -125,7 +125,7 @@ stamp_region_border <- function (mapping = aes(), data = ref_data,
 
 #' @export
 geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -138,7 +138,7 @@ geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, p
 #' @export
 stamp_region_text <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -149,7 +149,7 @@ stamp_region_text <- function (mapping = aes(), data = ref_data,
 
 #' @export
 geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -161,7 +161,7 @@ geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, 
 #' @export
 stamp_region_label <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 

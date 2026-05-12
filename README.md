@@ -9,13 +9,22 @@
     locales, `aes(region = my_var) + geom_region()` where scope of
     interest is declared via
     `options()`.](#interface-1-standard-interface-for-visualizing-regions-and-locales-aesregion--my_var--geom_region-where-scope-of-interest-is-declared-via-options)
-    - [North Carolina example](#north-carolina-example)
-    - [Australia example](#australia-example)
-    - [teethr example](#teethr-example)
+    - [North Carolina example (sf
+      package)](#north-carolina-example-sf-package)
+    - [Australia example (ozmaps)](#australia-example-ozmaps)
+    - [Brazil example (geobr)](#brazil-example-geobr)
+    - [Brain example (ggseg)](#brain-example-ggseg)
+    - [Dental example (teethr)](#dental-example-teethr)
+    - [Countries example
+      (rnaturalearth)](#countries-example-rnaturalearth)
+    - [US counties example (usmapdata)](#us-counties-example-usmapdata)
+    - [Texas counties (tigris)](#texas-counties-tigris)
+    - [Anatomy example (from polygons to sf)
+      (gganatogram)](#anatomy-example-from-polygons-to-sf-gganatogram)
   - [Interface \#2. use write\_\*() functions to specify reference data
     for
     layers.](#interface-2-use-write_-functions-to-specify-reference-data-for-layers)
-    - [North Carolina example](#north-carolina-example-1)
+    - [North Carolina example](#north-carolina-example)
     - [US example](#us-example)
 - [Minimal Packaging](#minimal-packaging)
   - [Do once](#do-once)
@@ -244,7 +253,7 @@ geom_region <- function (mapping = aes(), data = NULL,
                          stat = StatRegion,
                          position = "identity", 
                          na.rm = FALSE, show.legend = NA, 
-                         inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...){
+                         inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...){
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
         inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data,
@@ -257,7 +266,7 @@ geom_region <- function (mapping = aes(), data = NULL,
 stamp_region <- function (mapping = aes(), stat = StatRegionStamp, 
                           position = "identity", 
                           na.rm = FALSE, show.legend = NA, 
-                          inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+                          inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomSf, data = ref_data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -277,7 +286,7 @@ GeomSfBorder <- ggplot2::ggproto("GeomSfBorder", ggplot2::GeomSf,
 
 #' @export
 geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom =  GeomSfBorder, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -290,7 +299,7 @@ geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion,
 #' @export
 stamp_region_border <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomSfBorder, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -301,7 +310,7 @@ stamp_region_border <- function (mapping = aes(), data = ref_data,
 
 #' @export
 geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -314,7 +323,7 @@ geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, p
 #' @export
 stamp_region_text <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -325,7 +334,7 @@ stamp_region_text <- function (mapping = aes(), data = ref_data,
 
 #' @export
 geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -337,7 +346,7 @@ geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, 
 #' @export
 stamp_region_label <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -349,7 +358,7 @@ stamp_region_label <- function (mapping = aes(), data = ref_data,
 
 </details>
 
-### North Carolina example
+### North Carolina example (sf package)
 
 First, the authors will prepare a reference dataset that contains a
 [geometry](https://ggplot2.tidyverse.org/reference/ggsf.html#geometry-aesthetic),
@@ -361,7 +370,10 @@ regions of interest. For example, the identifiers from in `nc_ref` are
 # Interface #1
 
 # Step 1.a Create reference data set
-nc <- sf::st_read(system.file("shape/nc.shp", package="sf"))
+nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |> 
+  select(county_name = NAME, 
+         county_fips = FIPS, 
+         geometry)
 #> Reading layer `nc' from data source 
 #>   `/Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/sf/shape/nc.shp' 
 #>   using driver `ESRI Shapefile'
@@ -370,16 +382,11 @@ nc <- sf::st_read(system.file("shape/nc.shp", package="sf"))
 #> Dimension:     XY
 #> Bounding box:  xmin: -84.32385 ymin: 33.88199 xmax: -75.45698 ymax: 36.58965
 #> Geodetic CRS:  NAD27
-
-nc_ref <- nc |> 
-  select(county_name = NAME, 
-         county_fips = FIPS, 
-         geometry)
 ```
 
 ``` r
 # Step 1.b Declare reference data in options
-options(ggregions.ref.regions = nc_ref)
+options(ggregions.regions = nc_ref)
 ```
 
 ``` r
@@ -391,20 +398,13 @@ tribble(~county, ~ind_going,
   ggplot() + 
   aes(region = county,
       fill = ind_going) +
-  stamp_region()
+  stamp_region() +
+  geom_region()
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
-``` r
-
-last_plot() +
-  geom_region()
-```
-
-![](README_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
-
-### Australia example
+### Australia example (ozmaps)
 
 ``` r
 ## Step 1a Prep reference data
@@ -417,7 +417,7 @@ australia_state_ref <- sf_oz |>
 
 ``` r
 ## Step 1b declare reference data
-options(ggregions.ref.regions = australia_state_ref)
+options(ggregions.regions = australia_state_ref)
 ```
 
 ``` r
@@ -455,39 +455,87 @@ ggplot() +
 
 ![](README_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
 
-### teethr example
+### Brazil example (geobr)
 
 ``` r
-# Step 1a Prep Reference Data
-teethr::dental_arcade_mapping |> as_tibble() |>
+# Step 1.0 prepare reference data
+brazil_states <- geobr::read_state(year = 2020) |>
+  select(state_name = name_state, 
+         state_abbr = abbrev_state, 
+         state_code = code_state,
+         geometry = geom)
+
+# Step 1.1 declare reference data
+options(ggregions.regions = brazil_states)
+
+# Step 2. Map
+tribble(~state, ~info,
+        "Rondônia", 1,
+        "Amapá", 2,
+        "Amazônas", 3 ) |> 
+ggplot() + 
+  stamp_region() + 
+  aes(region = state, 
+      fill = info) +
+  geom_region() + 
+  stamp_region_border(keep = "Rondônia", color = "red") + 
+  stamp_region_label(aes(label = after_stat(state_abbr)))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+### Brain example (ggseg)
+
+``` r
+aseg_ref_coronal <- ggseg::aseg$data |> 
+  remove_missing() |>
+  filter(side == "coronal") |> 
+  select(region, geometry)
+
+options(ggregions.regions = aseg_ref_coronal)
+
+
+tribble(~region, ~info,
+        "amygdala", 1,
+        "hippocampus", 2,
+        "putamen", 3) |> 
+  ggplot() + 
+  aes(region = region,
+      fill = info) + 
+  stamp_region() +
+  geom_region() + 
+  geom_region_text(color = "grey")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+### Dental example (teethr)
+
+``` r
+# Step 1a Prepare Reference Data
+teethr::dental_arcade_mapping |> 
   left_join(teethr::tooth_notation |> dplyr::rename(tooth = text)) |>
-  dplyr::select(tooth_id = tooth, fdi = FDI, standard = standards, geometry) ->
+  dplyr::select(tooth_id = tooth, fdi = FDI, geometry)  ->
 teeth_ref_data
 
-head(teethr::dental_arcade_mapping)
-#> Simple feature collection with 6 features and 1 field
-#> Geometry type: POLYGON
-#> Dimension:     XY
-#> Bounding box:  xmin: 64.44807 ymin: 270.5784 xmax: 132.2833 ymax: 388.2091
-#> CRS:           NA
-#> # A tibble: 6 × 2
-#>   tooth                                                                 geometry
-#>   <chr>                                                                <POLYGON>
-#> 1 URM2  ((65.18537 293.3849, 65.71057 295.1088, 66.38935 296.4965, 67.34528 297…
-#> 2 URM1  ((74.4591 325.7847, 75.55431 326.5688, 76.88258 327.0586, 78.77511 327.…
-#> 3 URP2  ((76.59484 342.573, 77.43558 343.7596, 78.59217 344.6295, 80.03965 345.…
-#> 4 URP1  ((86.86233 359.6018, 86.86725 360.529, 87.02025 360.8659, 87.43738 361.…
-#> 5 URC1  ((101.1985 370.3966, 101.3456 371.2152, 101.6861 371.9995, 102.782 373.…
-#> 6 URI2  ((123.4955 387.3634, 123.4955 387.3634, 124.5163 387.7796, 125.556 388.…
-
-# Step 1b 
-options(ggregions.ref.regions = teeth_ref_data)
+# Step 1b Declare reference data
+options(ggregions.regions = teeth_ref_data)
 
 
 # Step 2 Plotting 
+tribble(~tooth, ~info,
+        "URM2", 1,
+        "URM1", 2) |> 
+  ggplot() + 
+  aes(region = tooth) +
+  stamp_region() +
+  geom_region(aes(fill = info))
 ```
 
+![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
 ``` r
+library(tidyverse)
 library(teethr)
 
 caries_ratios <- mb11_caries %>% 
@@ -497,6 +545,17 @@ caries_ratios <- mb11_caries %>%
   group_by(tooth) %>% 
   dental_ratio(count = caries_count) %>%
   dental_recode(tooth, "FDI", "text") 
+
+head(caries_ratios)
+#> # A tibble: 6 × 4
+#>   tooth     n count  ratio
+#>   <chr> <int> <dbl>  <dbl>
+#> 1 URI1     35     4 0.114 
+#> 2 URI2     31     4 0.129 
+#> 3 URC1     35     7 0.2   
+#> 4 URP1     34     3 0.0882
+#> 5 URP2     23     5 0.217 
+#> 6 URM1     32     7 0.219
 ```
 
 ``` r
@@ -507,12 +566,144 @@ caries_ratios |>
   geom_region(alpha = .5) + 
   geom_region_text(size = 2) + 
   scale_fill_viridis_c()
-#> Error in `geom_region()`:
-#> ! Problem while setting up geom.
-#> ℹ Error occurred in the 1st layer.
-#> Caused by error in `compute_geom_1()`:
-#> ! `geom_sf()` requires the following missing aesthetics: geometry.
 ```
+
+![](README_files/figure-gfm/arcade-1.png)<!-- -->
+
+### Countries example (rnaturalearth)
+
+``` r
+# Step 1a: Prepare reference data
+country_ref_data <- rnaturalearth::countries110 |> 
+  select(country_name = SOVEREIGNT,
+         iso3c = ISO_A3, 
+         geometry)
+
+# Step 1b: Declare reference data
+options(ggregions.regions = country_ref_data)
+
+
+# Step 2: Map
+tribble(~country, ~info,
+        "Mexico", 1,
+        "Germany", 2,
+        "Australia", 3,
+        "Brazil", 4) |>  
+  ggplot() + 
+  aes(region = country) + 
+  stamp_region() + 
+  geom_region() + 
+  aes(fill = info)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
+### US counties example (usmapdata)
+
+``` r
+us_county_ref <- usmapdata::us_map("counties", data_year = 2000) |> 
+  mutate(
+    county_name_state = paste0(county, ", ", full)) |> 
+  select(county_fips = fips, 
+         county_name_state,
+         geometry = geom) 
+
+options(ggregions.regions = us_county_ref)
+
+tribble(~fips, ~info,
+        "02290", 1,
+        "06073", 3,
+        "48043", 2) |> 
+  ggplot() + 
+  aes(region = fips,
+      fill = info) + 
+  stamp_region() +
+  geom_region() 
+```
+
+![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+### Texas counties (tigris)
+
+``` r
+# Step 1.a Prepare data
+texas_county_ref <- tigris::counties("Texas", resolution = '20m') |> 
+  mutate(fips = paste0(STATEFP, COUNTYFP)) |> 
+  select(county_name = NAME,
+         county_num = COUNTYNS,
+         county_fips = fips, 
+         geometry)
+#>   |                                                                              |                                                                      |   0%  |                                                                              |                                                                      |   1%  |                                                                              |=                                                                     |   1%  |                                                                              |=                                                                     |   2%  |                                                                              |==                                                                    |   2%  |                                                                              |==                                                                    |   3%  |                                                                              |==                                                                    |   4%  |                                                                              |===                                                                   |   4%  |                                                                              |===                                                                   |   5%  |                                                                              |====                                                                  |   5%  |                                                                              |====                                                                  |   6%  |                                                                              |=====                                                                 |   6%  |                                                                              |=====                                                                 |   7%  |                                                                              |=====                                                                 |   8%  |                                                                              |======                                                                |   8%  |                                                                              |======                                                                |   9%  |                                                                              |=======                                                               |   9%  |                                                                              |=======                                                               |  10%  |                                                                              |=======                                                               |  11%  |                                                                              |========                                                              |  11%  |                                                                              |========                                                              |  12%  |                                                                              |=========                                                             |  12%  |                                                                              |=========                                                             |  13%  |                                                                              |=========                                                             |  14%  |                                                                              |==========                                                            |  14%  |                                                                              |==========                                                            |  15%  |                                                                              |===========                                                           |  15%  |                                                                              |===========                                                           |  16%  |                                                                              |============                                                          |  16%  |                                                                              |============                                                          |  17%  |                                                                              |============                                                          |  18%  |                                                                              |=============                                                         |  18%  |                                                                              |=============                                                         |  19%  |                                                                              |==============                                                        |  19%  |                                                                              |==============                                                        |  20%  |                                                                              |==============                                                        |  21%  |                                                                              |===============                                                       |  21%  |                                                                              |===============                                                       |  22%  |                                                                              |================                                                      |  22%  |                                                                              |================                                                      |  23%  |                                                                              |================                                                      |  24%  |                                                                              |=================                                                     |  24%  |                                                                              |=================                                                     |  25%  |                                                                              |==================                                                    |  25%  |                                                                              |==================                                                    |  26%  |                                                                              |===================                                                   |  26%  |                                                                              |===================                                                   |  27%  |                                                                              |===================                                                   |  28%  |                                                                              |====================                                                  |  28%  |                                                                              |====================                                                  |  29%  |                                                                              |=====================                                                 |  29%  |                                                                              |=====================                                                 |  30%  |                                                                              |=====================                                                 |  31%  |                                                                              |======================                                                |  31%  |                                                                              |======================                                                |  32%  |                                                                              |=======================                                               |  32%  |                                                                              |=======================                                               |  33%  |                                                                              |=======================                                               |  34%  |                                                                              |========================                                              |  34%  |                                                                              |========================                                              |  35%  |                                                                              |=========================                                             |  35%  |                                                                              |=========================                                             |  36%  |                                                                              |==========================                                            |  36%  |                                                                              |==========================                                            |  37%  |                                                                              |==========================                                            |  38%  |                                                                              |===========================                                           |  38%  |                                                                              |===========================                                           |  39%  |                                                                              |============================                                          |  39%  |                                                                              |============================                                          |  40%  |                                                                              |============================                                          |  41%  |                                                                              |=============================                                         |  41%  |                                                                              |=============================                                         |  42%  |                                                                              |==============================                                        |  42%  |                                                                              |==============================                                        |  43%  |                                                                              |==============================                                        |  44%  |                                                                              |===============================                                       |  44%  |                                                                              |===============================                                       |  45%  |                                                                              |================================                                      |  45%  |                                                                              |================================                                      |  46%  |                                                                              |=================================                                     |  46%  |                                                                              |=================================                                     |  47%  |                                                                              |=================================                                     |  48%  |                                                                              |==================================                                    |  48%  |                                                                              |==================================                                    |  49%  |                                                                              |===================================                                   |  49%  |                                                                              |===================================                                   |  50%  |                                                                              |===================================                                   |  51%  |                                                                              |====================================                                  |  51%  |                                                                              |====================================                                  |  52%  |                                                                              |=====================================                                 |  52%  |                                                                              |=====================================                                 |  53%  |                                                                              |=====================================                                 |  54%  |                                                                              |======================================                                |  54%  |                                                                              |======================================                                |  55%  |                                                                              |=======================================                               |  55%  |                                                                              |=======================================                               |  56%  |                                                                              |========================================                              |  56%  |                                                                              |========================================                              |  57%  |                                                                              |========================================                              |  58%  |                                                                              |=========================================                             |  58%  |                                                                              |=========================================                             |  59%  |                                                                              |==========================================                            |  59%  |                                                                              |==========================================                            |  60%  |                                                                              |==========================================                            |  61%  |                                                                              |===========================================                           |  61%  |                                                                              |===========================================                           |  62%  |                                                                              |============================================                          |  62%  |                                                                              |============================================                          |  63%  |                                                                              |============================================                          |  64%  |                                                                              |=============================================                         |  64%  |                                                                              |=============================================                         |  65%  |                                                                              |==============================================                        |  65%  |                                                                              |==============================================                        |  66%  |                                                                              |===============================================                       |  66%  |                                                                              |===============================================                       |  67%  |                                                                              |===============================================                       |  68%  |                                                                              |================================================                      |  68%  |                                                                              |================================================                      |  69%  |                                                                              |=================================================                     |  69%  |                                                                              |=================================================                     |  70%  |                                                                              |=================================================                     |  71%  |                                                                              |==================================================                    |  71%  |                                                                              |==================================================                    |  72%  |                                                                              |===================================================                   |  72%  |                                                                              |===================================================                   |  73%  |                                                                              |===================================================                   |  74%  |                                                                              |====================================================                  |  74%  |                                                                              |====================================================                  |  75%  |                                                                              |=====================================================                 |  75%  |                                                                              |=====================================================                 |  76%  |                                                                              |======================================================                |  76%  |                                                                              |======================================================                |  77%  |                                                                              |======================================================                |  78%  |                                                                              |=======================================================               |  78%  |                                                                              |=======================================================               |  79%  |                                                                              |========================================================              |  79%  |                                                                              |========================================================              |  80%  |                                                                              |========================================================              |  81%  |                                                                              |=========================================================             |  81%  |                                                                              |=========================================================             |  82%  |                                                                              |==========================================================            |  82%  |                                                                              |==========================================================            |  83%  |                                                                              |==========================================================            |  84%  |                                                                              |===========================================================           |  84%  |                                                                              |===========================================================           |  85%  |                                                                              |============================================================          |  85%  |                                                                              |============================================================          |  86%  |                                                                              |=============================================================         |  86%  |                                                                              |=============================================================         |  87%  |                                                                              |=============================================================         |  88%  |                                                                              |==============================================================        |  88%  |                                                                              |==============================================================        |  89%  |                                                                              |===============================================================       |  89%  |                                                                              |===============================================================       |  90%  |                                                                              |===============================================================       |  91%  |                                                                              |================================================================      |  91%  |                                                                              |================================================================      |  92%  |                                                                              |=================================================================     |  92%  |                                                                              |=================================================================     |  93%  |                                                                              |=================================================================     |  94%  |                                                                              |==================================================================    |  94%  |                                                                              |==================================================================    |  95%  |                                                                              |===================================================================   |  95%  |                                                                              |===================================================================   |  96%  |                                                                              |====================================================================  |  96%  |                                                                              |====================================================================  |  97%  |                                                                              |====================================================================  |  98%  |                                                                              |===================================================================== |  98%  |                                                                              |===================================================================== |  99%  |                                                                              |======================================================================|  99%  |                                                                              |======================================================================| 100%
+
+# Step 1b Declare data
+options(ggregions.regions = texas_county_ref)
+
+
+# Step 2. Map
+
+tribble(~county, ~info,
+        "Clay", 1,
+        "Kerr", 3,
+        "Harris", 5,
+        "Menard", 11) |> 
+  ggplot() + 
+  aes(region = county,
+      fill = info) + 
+  stamp_region() + 
+  geom_region() + 
+  stamp_region_border(keep = "Harris", color = "red")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+### Anatomy example (from polygons to sf) (gganatogram)
+
+``` r
+to_sf_routine <- function(data){
+  
+  data |>
+  mutate(y = -y) |>
+  sf::st_as_sf(coords = c("x", "y"), agr = "constant") |>
+  group_by(id, group) |>
+  summarize(do_union = F) |> 
+  ungroup() |> 
+  group_by(id, group) |>
+  summarise() |>
+  mutate(geometry = geometry |> sf::st_cast("POLYGON")) |> 
+  mutate(geometry = geometry |> sf::st_cast("MULTIPOLYGON")) |> 
+  ungroup() 
+  
+}
+
+female_sf <- gganatogram::hgFemale_list[c(1:156, 180:195)] |> 
+  bind_rows() |>
+  remove_missing() |>
+  to_sf_routine()
+```
+
+``` r
+# Step 1.a Prepare Data
+ref_female_sf <- female_sf |> 
+  select(organ = id, geometry)
+
+# Step 1.b Declare reference data
+options(ggregions.regions = ref_female_sf)
+
+# Step 2. plot
+tribble(~my_organ, ~color,   
+        "stomach", "cadetblue",
+        "brain",   "pink3",
+        "colon",   "darkseagreen4",
+        "lung",    "plum") |> 
+ggplot() + 
+  stamp_region(alpha = .2) +
+  aes(region = my_organ) +
+  geom_region() +
+  aes(fill = I(color)) + 
+  geom_region_text() 
+```
+
+![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
 ## Interface \#2. use write\_\*() functions to specify reference data for layers.
 
@@ -627,6 +818,7 @@ nc_ref <- nc |>
   select(county_name = NAME, 
          county_fips = FIPS, 
          geometry)
+#> Error: object 'nc' not found
 
 # Step 1.b
 geom_county <- ggregions::write_geom_region(ref_data = nc_ref)
@@ -644,7 +836,7 @@ tribble(~county, ~ind_going,
   geom_county()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
 ``` r
 
@@ -726,7 +918,7 @@ ggplot(data = us_income) +
   geom_state_border(keep = "North Carolina")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 # Minimal Packaging
 

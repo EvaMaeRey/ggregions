@@ -14,7 +14,8 @@ knitr::opts_chunk$set(
   message = F,
   warning = F,
   error = T,
-  cache = F
+  cache = F,
+  dpi = 300
 )
 ```
 
@@ -211,7 +212,7 @@ geom_region <- function (mapping = aes(), data = NULL,
                          stat = StatRegion,
                          position = "identity", 
                          na.rm = FALSE, show.legend = NA, 
-                         inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...){
+                         inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...){
     c(layer_sf(geom = GeomSf, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
         inherit.aes = inherit.aes, params = rlang::list2(na.rm = na.rm, ref_data = ref_data,
@@ -224,7 +225,7 @@ geom_region <- function (mapping = aes(), data = NULL,
 stamp_region <- function (mapping = aes(), stat = StatRegionStamp, 
                           position = "identity", 
                           na.rm = FALSE, show.legend = NA, 
-                          inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+                          inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomSf, data = ref_data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -244,7 +245,7 @@ GeomSfBorder <- ggplot2::ggproto("GeomSfBorder", ggplot2::GeomSf,
 
 #' @export
 geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom =  GeomSfBorder, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -257,7 +258,7 @@ geom_region_border <- function (mapping = aes(), data = NULL, stat = StatRegion,
 #' @export
 stamp_region_border <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomSfBorder, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -268,7 +269,7 @@ stamp_region_border <- function (mapping = aes(), data = ref_data,
 
 #' @export
 geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -281,7 +282,7 @@ geom_region_text <- function (mapping = aes(), data = NULL, stat = StatRegion, p
 #' @export
 stamp_region_text <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomText, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -292,7 +293,7 @@ stamp_region_text <- function (mapping = aes(), data = ref_data,
 
 #' @export
 geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.ref.regions", ref_data_us), ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = TRUE, ref_data = getOption("ggregions.regions", ref_data_us), ...) 
 {
     c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -304,7 +305,7 @@ geom_region_label <- function (mapping = aes(), data = NULL, stat = StatRegion, 
 #' @export
 stamp_region_label <- function (mapping = aes(), data = ref_data, 
                           stat = StatRegionStamp, position = "identity", 
-    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.ref.regions", ref_data_us), stamp = TRUE, ...) 
+    na.rm = FALSE, show.legend = NA, inherit.aes = FALSE, ref_data = getOption("ggregions.regions", ref_data_us), stamp = TRUE, ...) 
 {
     c(layer_sf(geom = GeomLabel, data = data, mapping = mapping, 
         stat = stat, position = position, show.legend = show.legend, 
@@ -318,7 +319,7 @@ stamp_region_label <- function (mapping = aes(), data = ref_data,
 
 </details>
 
-### North Carolina example
+### North Carolina example (sf package)
 
 First, the authors will prepare a reference dataset that contains a [geometry](https://ggplot2.tidyverse.org/reference/ggsf.html#geometry-aesthetic), sfc-containing column as well as columns of allowed identifiers for the regions of interest.  For example, the identifiers from in `nc_ref` are `county_name` and `county_fips`. 
 
@@ -326,9 +327,7 @@ First, the authors will prepare a reference dataset that contains a [geometry](h
 # Interface #1
 
 # Step 1.a Create reference data set
-nc <- sf::st_read(system.file("shape/nc.shp", package="sf"))
-
-nc_ref <- nc |> 
+nc_ref <- sf::st_read(system.file("shape/nc.shp", package="sf")) |> 
   select(county_name = NAME, 
          county_fips = FIPS, 
          geometry)
@@ -337,7 +336,7 @@ nc_ref <- nc |>
 
 ```{r}
 # Step 1.b Declare reference data in options
-options(ggregions.ref.regions = nc_ref)
+options(ggregions.regions = nc_ref)
 ```
 
 
@@ -350,16 +349,14 @@ tribble(~county, ~ind_going,
   ggplot() + 
   aes(region = county,
       fill = ind_going) +
-  stamp_region()
-
-last_plot() +
+  stamp_region() +
   geom_region()
 
 
 ```
 
 
-### Australia example
+### Australia example (ozmaps)
 
 ```{r, fig.show='hide'}
 ## Step 1a Prep reference data
@@ -372,7 +369,7 @@ australia_state_ref <- sf_oz |>
 
 ```{r}
 ## Step 1b declare reference data
-options(ggregions.ref.regions = australia_state_ref)
+options(ggregions.regions = australia_state_ref)
 ```
 
 ```{r}
@@ -404,27 +401,86 @@ ggplot() +
 ```
 
 
+### Brazil example (geobr)
 
-### teethr example
+```{r, cache = T}
+# Step 1.0 prepare reference data
+brazil_states <- geobr::read_state(year = 2020) |>
+  select(state_name = name_state, 
+         state_abbr = abbrev_state, 
+         state_code = code_state,
+         geometry = geom)
 
-```{r}
-# Step 1a Prep Reference Data
-teethr::dental_arcade_mapping |> as_tibble() |>
+# Step 1.1 declare reference data
+options(ggregions.regions = brazil_states)
+
+# Step 2. Map
+tribble(~state, ~info,
+        "Rondônia", 1,
+        "Amapá", 2,
+        "Amazônas", 3 ) |> 
+ggplot() + 
+  stamp_region() + 
+  aes(region = state, 
+      fill = info) +
+  geom_region() + 
+  stamp_region_border(keep = "Rondônia", color = "red") + 
+  stamp_region_label(aes(label = after_stat(state_abbr)))
+```
+
+### Brain example (ggseg)
+
+
+```{r, cache = T}
+aseg_ref_coronal <- ggseg::aseg$data |> 
+  remove_missing() |>
+  filter(side == "coronal") |> 
+  select(region, geometry)
+
+options(ggregions.regions = aseg_ref_coronal)
+
+
+tribble(~region, ~info,
+        "amygdala", 1,
+        "hippocampus", 2,
+        "putamen", 3) |> 
+  ggplot() + 
+  aes(region = region,
+      fill = info) + 
+  stamp_region() +
+  geom_region() + 
+  geom_region_text(color = "grey")
+
+```
+
+
+
+### Dental example (teethr)
+
+```{r, cache = F}
+# Step 1a Prepare Reference Data
+teethr::dental_arcade_mapping |> 
   left_join(teethr::tooth_notation |> dplyr::rename(tooth = text)) |>
-  dplyr::select(tooth_id = tooth, fdi = FDI, standard = standards, geometry) ->
+  dplyr::select(tooth_id = tooth, fdi = FDI, geometry)  ->
 teeth_ref_data
 
-head(teethr::dental_arcade_mapping)
-
-# Step 1b 
-options(ggregions.ref.regions = teeth_ref_data)
+# Step 1b Declare reference data
+options(ggregions.regions = teeth_ref_data)
 
 
 # Step 2 Plotting 
+tribble(~tooth, ~info,
+        "URM2", 1,
+        "URM1", 2) |> 
+  ggplot() + 
+  aes(region = tooth) +
+  stamp_region() +
+  geom_region(aes(fill = info))
 ```
 
 
 ```{r, echo = T}
+library(tidyverse)
 library(teethr)
 
 caries_ratios <- mb11_caries %>% 
@@ -434,6 +490,8 @@ caries_ratios <- mb11_caries %>%
   group_by(tooth) %>% 
   dental_ratio(count = caries_count) %>%
   dental_recode(tooth, "FDI", "text") 
+
+head(caries_ratios)
 
 ```
 
@@ -447,6 +505,140 @@ caries_ratios |>
   geom_region(alpha = .5) + 
   geom_region_text(size = 2) + 
   scale_fill_viridis_c()
+```
+
+### Countries example (rnaturalearth)
+
+```{r, cache=T}
+# Step 1a: Prepare reference data
+country_ref_data <- rnaturalearth::countries110 |> 
+  select(country_name = SOVEREIGNT,
+         iso3c = ISO_A3, 
+         geometry)
+
+# Step 1b: Declare reference data
+options(ggregions.regions = country_ref_data)
+
+
+# Step 2: Map
+tribble(~country, ~info,
+        "Mexico", 1,
+        "Germany", 2,
+        "Australia", 3,
+        "Brazil", 4) |>  
+  ggplot() + 
+  aes(region = country) + 
+  stamp_region() + 
+  geom_region() + 
+  aes(fill = info)
+
+```
+
+
+### US counties example (usmapdata)
+
+```{r, cache=T}
+us_county_ref <- usmapdata::us_map("counties", data_year = 2000) |> 
+  mutate(
+    county_name_state = paste0(county, ", ", full)) |> 
+  select(county_fips = fips, 
+         county_name_state,
+         geometry = geom) 
+
+options(ggregions.regions = us_county_ref)
+
+tribble(~fips, ~info,
+        "02290", 1,
+        "06073", 3,
+        "48043", 2) |> 
+  ggplot() + 
+  aes(region = fips,
+      fill = info) + 
+  stamp_region() +
+  geom_region() 
+```
+
+
+### Texas counties (tigris)
+
+
+```{r, cache=T}
+# Step 1.a Prepare data
+texas_county_ref <- tigris::counties("Texas", resolution = '20m') |> 
+  mutate(fips = paste0(STATEFP, COUNTYFP)) |> 
+  select(county_name = NAME,
+         county_num = COUNTYNS,
+         county_fips = fips, 
+         geometry)
+
+# Step 1b Declare data
+options(ggregions.regions = texas_county_ref)
+
+
+# Step 2. Map
+
+tribble(~county, ~info,
+        "Clay", 1,
+        "Kerr", 3,
+        "Harris", 5,
+        "Menard", 11) |> 
+  ggplot() + 
+  aes(region = county,
+      fill = info) + 
+  stamp_region() + 
+  geom_region() + 
+  stamp_region_border(keep = "Harris", color = "red")
+
+```
+
+
+### Anatomy example (from polygons to sf) (gganatogram)
+
+```{r}
+to_sf_routine <- function(data){
+  
+  data |>
+  mutate(y = -y) |>
+  sf::st_as_sf(coords = c("x", "y"), agr = "constant") |>
+  group_by(id, group) |>
+  summarize(do_union = F) |> 
+  ungroup() |> 
+  group_by(id, group) |>
+  summarise() |>
+  mutate(geometry = geometry |> sf::st_cast("POLYGON")) |> 
+  mutate(geometry = geometry |> sf::st_cast("MULTIPOLYGON")) |> 
+  ungroup() 
+  
+}
+
+female_sf <- gganatogram::hgFemale_list[c(1:156, 180:195)] |> 
+  bind_rows() |>
+  remove_missing() |>
+  to_sf_routine()
+```
+
+
+```{r}
+# Step 1.a Prepare Data
+ref_female_sf <- female_sf |> 
+  select(organ = id, geometry)
+
+# Step 1.b Declare reference data
+options(ggregions.regions = ref_female_sf)
+
+# Step 2. plot
+tribble(~my_organ, ~color,   
+        "stomach", "cadetblue",
+        "brain",   "pink3",
+        "colon",   "darkseagreen4",
+        "lung",    "plum") |> 
+ggplot() + 
+  stamp_region(alpha = .2) +
+  aes(region = my_organ) +
+  geom_region() +
+  aes(fill = I(color)) + 
+  geom_region_text() 
+
 ```
 
 
