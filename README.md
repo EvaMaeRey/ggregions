@@ -22,7 +22,7 @@
     - [Texas counties (tigris)](#texas-counties-tigris)
     - [Human anatomy example (features from polygons to sf routine)
       (gganatogram)](#human-anatomy-example-features-from-polygons-to-sf-routine-gganatogram)
-- [Mouse anatomy example](#mouse-anatomy-example)
+    - [Mouse anatomy example](#mouse-anatomy-example)
   - [Interface \#2. use write\_\*() functions to specify reference data
     for
     layers.](#interface-2-use-write_-functions-to-specify-reference-data-for-layers)
@@ -514,6 +514,7 @@ tribble(~region, ~info,
 ### US states example (usmapdata)
 
 ``` r
+# Step 1. Prepare reference data
 us_states_ref <- usmapdata::us_map() |>
   select( 
     state_name = full, # first variable will also be 'id' var, keep and drop
@@ -522,8 +523,11 @@ us_states_ref <- usmapdata::us_map() |>
     geometry = geom,  # one column 'geometry' is required
          )  
 
+# Step 2. Declare reference data
 options(ggregions.regions = us_states_ref)
 
+
+# Step 3. Visualize
 tribble(~state, ~info,
         "Texas", TRUE,
         "NC",    FALSE) |>
@@ -731,7 +735,7 @@ ggplot() +
 
 ![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
-# Mouse anatomy example
+### Mouse anatomy example
 
 ``` r
 # Step 1 Prepare reference data

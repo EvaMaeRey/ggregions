@@ -458,6 +458,7 @@ tribble(~region, ~info,
 
 
 ```{r}
+# Step 1. Prepare reference data
 us_states_ref <- usmapdata::us_map() |>
   select( 
     state_name = full, # first variable will also be 'id' var, keep and drop
@@ -466,8 +467,11 @@ us_states_ref <- usmapdata::us_map() |>
     geometry = geom,  # one column 'geometry' is required
          )  
 
+# Step 2. Declare reference data
 options(ggregions.regions = us_states_ref)
 
+
+# Step 3. Visualize
 tribble(~state, ~info,
         "Texas", TRUE,
         "NC",    FALSE) |>
@@ -666,7 +670,7 @@ ggplot() +
 ```
 
 
-# Mouse anatomy example
+### Mouse anatomy example
 
 ```{r}
 # Step 1 Prepare reference data
