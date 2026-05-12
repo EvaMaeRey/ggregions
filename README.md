@@ -13,14 +13,14 @@
       package)](#north-carolina-example-sf-package)
     - [Australia example (ozmaps)](#australia-example-ozmaps)
     - [Brazil example (geobr)](#brazil-example-geobr)
-    - [Brain example (ggseg)](#brain-example-ggseg)
+    - [Brain regions example (ggseg)](#brain-regions-example-ggseg)
     - [Dental example (teethr)](#dental-example-teethr)
     - [Countries example
       (rnaturalearth)](#countries-example-rnaturalearth)
     - [US counties example (usmapdata)](#us-counties-example-usmapdata)
     - [Texas counties (tigris)](#texas-counties-tigris)
-    - [Anatomy example (from polygons to sf)
-      (gganatogram)](#anatomy-example-from-polygons-to-sf-gganatogram)
+    - [Anatomy example (features from polygons to sf routine)
+      (gganatogram)](#anatomy-example-features-from-polygons-to-sf-routine-gganatogram)
   - [Interface \#2. use write\_\*() functions to specify reference data
     for
     layers.](#interface-2-use-write_-functions-to-specify-reference-data-for-layers)
@@ -484,7 +484,7 @@ ggplot() +
 
 ![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
-### Brain example (ggseg)
+### Brain regions example (ggseg)
 
 ``` r
 aseg_ref_coronal <- ggseg::aseg$data |> 
@@ -656,7 +656,7 @@ tribble(~county, ~info,
 
 ![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
-### Anatomy example (from polygons to sf) (gganatogram)
+### Anatomy example (features from polygons to sf routine) (gganatogram)
 
 ``` r
 to_sf_routine <- function(data){
@@ -690,20 +690,48 @@ ref_female_sf <- female_sf |>
 options(ggregions.regions = ref_female_sf)
 
 # Step 2. plot
-tribble(~my_organ, ~color,   
+tribble(~ organ, ~ color,   
         "stomach", "cadetblue",
         "brain",   "pink3",
         "colon",   "darkseagreen4",
         "lung",    "plum") |> 
 ggplot() + 
   stamp_region(alpha = .2) +
-  aes(region = my_organ) +
+  aes(region = organ) +
   geom_region() +
   aes(fill = I(color)) + 
   geom_region_text() 
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+
+``` r
+# Step 1 Prepare reference data
+f_mouse_organs <- gganatogram::mmFemale_list |> 
+  bind_rows() |>
+  remove_missing() |>
+  filter(id %in% gganatogram::mmFemale_key$organ) |>
+  to_sf_routine() |> 
+  select(organ = id, geometry)
+
+# Step 2 Declare reference data
+options(ggregions.regions = f_mouse_organs)
+
+
+# Step 3 Plot!
+tribble(~mouse_organ,      ~color,   
+        "lung",       "cadetblue",
+        "heart",          "coral",
+        "liver",  "darkseagreen4",
+        "kidney",          "plum") |> 
+ggplot() + 
+  stamp_region(alpha = .2) +
+  aes(region = mouse_organ) + 
+  geom_region() +
+  aes(fill = I(color))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
 ## Interface \#2. use write\_\*() functions to specify reference data for layers.
 
@@ -836,7 +864,7 @@ tribble(~county, ~ind_going,
   geom_county()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 ``` r
 
@@ -918,7 +946,7 @@ ggplot(data = us_income) +
   geom_state_border(keep = "North Carolina")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
 # Minimal Packaging
 

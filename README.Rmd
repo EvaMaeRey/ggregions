@@ -428,7 +428,7 @@ ggplot() +
   stamp_region_label(aes(label = after_stat(state_abbr)))
 ```
 
-### Brain example (ggseg)
+### Brain regions example (ggseg)
 
 
 ```{r, cache = T}
@@ -592,7 +592,7 @@ tribble(~county, ~info,
 ```
 
 
-### Anatomy example (from polygons to sf) (gganatogram)
+### Anatomy example (features from polygons to sf routine) (gganatogram)
 
 ```{r}
 to_sf_routine <- function(data){
@@ -627,17 +627,46 @@ ref_female_sf <- female_sf |>
 options(ggregions.regions = ref_female_sf)
 
 # Step 2. plot
-tribble(~my_organ, ~color,   
+tribble(~ organ, ~ color,   
         "stomach", "cadetblue",
         "brain",   "pink3",
         "colon",   "darkseagreen4",
         "lung",    "plum") |> 
 ggplot() + 
   stamp_region(alpha = .2) +
-  aes(region = my_organ) +
+  aes(region = organ) +
   geom_region() +
   aes(fill = I(color)) + 
   geom_region_text() 
+
+```
+
+
+```{r}
+# Step 1 Prepare reference data
+f_mouse_organs <- gganatogram::mmFemale_list |> 
+  bind_rows() |>
+  remove_missing() |>
+  filter(id %in% gganatogram::mmFemale_key$organ) |>
+  to_sf_routine() |> 
+  select(organ = id, geometry)
+
+# Step 2 Declare reference data
+options(ggregions.regions = f_mouse_organs)
+
+
+# Step 3 Plot!
+tribble(~mouse_organ,      ~color,   
+        "lung",       "cadetblue",
+        "heart",          "coral",
+        "liver",  "darkseagreen4",
+        "kidney",          "plum") |> 
+ggplot() + 
+  stamp_region(alpha = .2) +
+  aes(region = mouse_organ) + 
+  geom_region() +
+  aes(fill = I(color))
+
 
 ```
 
