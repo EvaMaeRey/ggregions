@@ -23,6 +23,7 @@
     - [Human anatomy example (features from polygons to sf routine)
       (gganatogram)](#human-anatomy-example-features-from-polygons-to-sf-routine-gganatogram)
     - [Mouse anatomy example](#mouse-anatomy-example)
+    - [Cell organiods](#cell-organiods)
   - [Interface \#2. use write\_\*() functions to specify reference data
     for
     layers.](#interface-2-use-write_-functions-to-specify-reference-data-for-layers)
@@ -44,6 +45,39 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 <!-- badges: end -->
 
 # {ggregions}
+
+{ggregions} introduces a new general, deterministic, flexible, semantic,
+positional aesthetic `region`.
+
+**A General positional aesthetic** Like positional aesthetics x and y in
+ggplot2, `region` will determine the position of the layer (like
+geom_point) that takes on such positional aesthetics. `region` is
+‘general’ because it is intended for different regional scopes
+(countries, provinces, anatomical organs, etc.)
+
+**Semantic** However, unlike, x and y, `region` ‘understands’ meanings
+of *names* (like “Texas” or “NC”). The layer `geom_region()` (and
+scope-specific variants like `geom_country()`) handles the translation
+from semantic information, e.g. “North Carolina”, to boundary
+information.
+
+**Deteministic** `region` is relatively ‘deterministic’ compared to
+other semantic encodings (like encoding “frog” with green color) - a
+whole range of greens might represent ‘frog’ well, but in the ggregions
+framework, ‘Texas’ is expected to return a relatively predictable shape
+in space.
+
+**Flexible** Semantic flexibility is built in such that a number of
+allowed names that identify regions is allowed. So long as there is
+uniqueness within the scope of the regions of interest, the user can
+‘map’ from regional identifiers to `region` with confidence;
+e.g. “Texas” and “TX” are allowed, but not “Colombia” and “CO” and
+“Colorado” and “CO”).
+
+To do… add `locale` and `geom_locale()` for coordinate locations. and
+`path` and `geom_?()` for path sf objects. And for hierarchy `subregion`
+and `geom_subregion` and friends, and `metaregion` and
+`geom_metaregion()`
 
 R Medicine Talk
 [slides](https://evamaerey.github.io/mytidytuesday/2026-04-03-r-medicine-ggregions/r-medicine-ggregions.html#1)
@@ -752,10 +786,10 @@ options(ggregions.regions = f_mouse_organs)
 
 # Step 3 Plot!
 tribble(~mouse_organ,      ~color,   
-        "lung",       "cadetblue",
+        "lung",       "cadetblue3",
         "heart",          "coral",
-        "liver",  "darkseagreen4",
-        "kidney",          "plum") |> 
+        "liver",  "darkseagreen2",
+        "kidney",          "plum2") |> 
 ggplot() + 
   stamp_region(alpha = .2) +
   aes(region = mouse_organ) + 
@@ -764,6 +798,32 @@ ggplot() +
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+
+### Cell organiods
+
+``` r
+cell_ref <- gganatogram::cell_list$cell |> 
+  bind_rows() |>
+  remove_missing() |>
+  filter(id %in% gganatogram::cell_key$cell$organ) |>
+  to_sf_routine() |> 
+  select(organ = id, geometry) |> 
+  mutate(organ = str_replace_all(organ, "_", " "))
+
+options(ggregions.regions = cell_ref)
+
+tribble(~organ, ~info,
+        "endosomes", "A",
+        "golgi apparatus", "B",
+        "centrosome", "C") |> 
+  ggplot() + 
+  aes(region = organ,
+      fill = organ) + 
+  stamp_region(alpha = .1) + 
+  geom_region() 
+```
+
+![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 ## Interface \#2. use write\_\*() functions to specify reference data for layers.
 
@@ -896,7 +956,7 @@ tribble(~county, ~ind_going,
   geom_county()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-24-1.png)<!-- -->
 
 ``` r
 
@@ -978,7 +1038,7 @@ ggplot(data = us_income) +
   geom_state_border(keep = "North Carolina")
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-25-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-26-1.png)<!-- -->
 
 # Minimal Packaging
 
