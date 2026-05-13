@@ -13,9 +13,9 @@
       package)](#north-carolina-example-sf-package)
     - [Australia example (ozmaps)](#australia-example-ozmaps)
     - [Brazil example (geobr)](#brazil-example-geobr)
-    - [Brain regions example (ggseg)](#brain-regions-example-ggseg)
-    - [US states example (usmapdata)](#us-states-example-usmapdata)
     - [Dental example (teethr)](#dental-example-teethr)
+    - [US states example (usmapdata)](#us-states-example-usmapdata)
+    - [Brain regions example (ggseg)](#brain-regions-example-ggseg)
     - [Countries example
       (rnaturalearth)](#countries-example-rnaturalearth)
     - [US counties example (usmapdata)](#us-counties-example-usmapdata)
@@ -520,59 +520,6 @@ ggplot() +
 
 ![](README_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
-### Brain regions example (ggseg)
-
-``` r
-aseg_ref_coronal <- ggseg::aseg$data |> 
-  remove_missing() |>
-  filter(side == "coronal") |> 
-  select(region, geometry)
-
-options(ggregions.regions = aseg_ref_coronal)
-
-
-tribble(~region, ~info,
-        "amygdala", 1,
-        "hippocampus", 2,
-        "putamen", 3) |> 
-  ggplot() + 
-  aes(region = region,
-      fill = info) + 
-  stamp_region() +
-  geom_region() + 
-  geom_region_text(color = "grey")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
-
-### US states example (usmapdata)
-
-``` r
-# Step 1. Prepare reference data
-us_states_ref <- usmapdata::us_map() |>
-  select( 
-    state_name = full, # first variable will also be 'id' var, keep and drop
-    state_abbr = abbr, 
-    state_fips = fips,
-    geometry = geom,  # one column 'geometry' is required
-         )  
-
-# Step 2. Declare reference data
-options(ggregions.regions = us_states_ref)
-
-
-# Step 3. Visualize
-tribble(~state, ~info,
-        "Texas", TRUE,
-        "NC",    FALSE) |>
-  ggplot() + 
-  aes(region = state,
-      fill = info) + 
-  geom_region()
-```
-
-![](README_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
-
 ### Dental example (teethr)
 
 ``` r
@@ -596,7 +543,7 @@ tribble(~tooth, ~info,
   geom_region(aes(fill = info))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 ``` r
 library(tidyverse)
@@ -633,6 +580,59 @@ caries_ratios |>
 ```
 
 ![](README_files/figure-gfm/arcade-1.png)<!-- -->
+
+### US states example (usmapdata)
+
+``` r
+# Step 1. Prepare reference data
+us_states_ref <- usmapdata::us_map() |>
+  select( 
+    state_name = full, # first variable will also be 'id' var, keep and drop
+    state_abbr = abbr, 
+    state_fips = fips,
+    geometry = geom,  # one column 'geometry' is required
+         )  
+
+# Step 2. Declare reference data
+options(ggregions.regions = us_states_ref)
+
+
+# Step 3. Visualize
+tribble(~state, ~info,
+        "Texas", TRUE,
+        "NC",    FALSE) |>
+  ggplot() + 
+  aes(region = state,
+      fill = info) + 
+  geom_region()
+```
+
+![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+
+### Brain regions example (ggseg)
+
+``` r
+aseg_ref_coronal <- ggseg::aseg$data |> 
+  remove_missing() |>
+  filter(side == "coronal") |> 
+  select(region, geometry)
+
+options(ggregions.regions = aseg_ref_coronal)
+
+
+tribble(~region, ~info,
+        "amygdala", 1,
+        "hippocampus", 2,
+        "putamen", 3) |> 
+  ggplot() + 
+  aes(region = region,
+      fill = info) + 
+  stamp_region() +
+  geom_region() + 
+  geom_region_text(color = "grey")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 ### Countries example (rnaturalearth)
 

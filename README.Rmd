@@ -444,60 +444,6 @@ ggplot() +
   stamp_region_label(aes(label = after_stat(state_abbr)))
 ```
 
-### Brain regions example (ggseg)
-
-
-```{r, cache = T}
-aseg_ref_coronal <- ggseg::aseg$data |> 
-  remove_missing() |>
-  filter(side == "coronal") |> 
-  select(region, geometry)
-
-options(ggregions.regions = aseg_ref_coronal)
-
-
-tribble(~region, ~info,
-        "amygdala", 1,
-        "hippocampus", 2,
-        "putamen", 3) |> 
-  ggplot() + 
-  aes(region = region,
-      fill = info) + 
-  stamp_region() +
-  geom_region() + 
-  geom_region_text(color = "grey")
-
-```
-
-
-### US states example (usmapdata)
-
-
-```{r}
-# Step 1. Prepare reference data
-us_states_ref <- usmapdata::us_map() |>
-  select( 
-    state_name = full, # first variable will also be 'id' var, keep and drop
-    state_abbr = abbr, 
-    state_fips = fips,
-    geometry = geom,  # one column 'geometry' is required
-         )  
-
-# Step 2. Declare reference data
-options(ggregions.regions = us_states_ref)
-
-
-# Step 3. Visualize
-tribble(~state, ~info,
-        "Texas", TRUE,
-        "NC",    FALSE) |>
-  ggplot() + 
-  aes(region = state,
-      fill = info) + 
-  geom_region()
-```
-
-
 
 ### Dental example (teethr)
 
@@ -549,6 +495,64 @@ caries_ratios |>
   geom_region(alpha = .5) + 
   geom_region_text(size = 2) + 
   scale_fill_viridis_c()
+```
+
+
+
+
+### US states example (usmapdata)
+
+
+```{r}
+# Step 1. Prepare reference data
+us_states_ref <- usmapdata::us_map() |>
+  select( 
+    state_name = full, # first variable will also be 'id' var, keep and drop
+    state_abbr = abbr, 
+    state_fips = fips,
+    geometry = geom,  # one column 'geometry' is required
+         )  
+
+# Step 2. Declare reference data
+options(ggregions.regions = us_states_ref)
+
+
+# Step 3. Visualize
+tribble(~state, ~info,
+        "Texas", TRUE,
+        "NC",    FALSE) |>
+  ggplot() + 
+  aes(region = state,
+      fill = info) + 
+  geom_region()
+```
+
+
+
+
+### Brain regions example (ggseg)
+
+
+```{r, cache = T}
+aseg_ref_coronal <- ggseg::aseg$data |> 
+  remove_missing() |>
+  filter(side == "coronal") |> 
+  select(region, geometry)
+
+options(ggregions.regions = aseg_ref_coronal)
+
+
+tribble(~region, ~info,
+        "amygdala", 1,
+        "hippocampus", 2,
+        "putamen", 3) |> 
+  ggplot() + 
+  aes(region = region,
+      fill = info) + 
+  stamp_region() +
+  geom_region() + 
+  geom_region_text(color = "grey")
+
 ```
 
 ### Countries example (rnaturalearth)
